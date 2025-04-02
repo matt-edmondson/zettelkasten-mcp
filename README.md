@@ -10,9 +10,12 @@ The Zettelkasten method is a knowledge management system developed by German soc
 2. **Connectivity**: Notes are linked together to create a network of knowledge, with meaningful relationships between ideas
 3. **Emergence**: As the network grows, new patterns and insights emerge that weren't obvious when the individual notes were created
 
-What makes the Zettelkasten approach powerful is how it enables exploration in multiple ways. You can dive deeper into specific topics by following connections within a subject area ("vertical exploration"), or discover unexpected relationships between different fields by traversing links that cross domains ("horizontal exploration"). This structure invites serendipitous discoveries as you follow trails of thought from note to note, all while keeping each piece of information easily accessible through its unique identifier.
+What makes the Zettelkasten approach powerful is how it enables exploration in multiple ways:
 
-Luhmann called his system his "second brain" or "communication partner" - this digital implementation aims to provide similar benefits through modern technology.
+- **Vertical exploration**: dive deeper into specific topics by following connections within a subject area.
+- **Horizontal exploration**: discover unexpected relationships between different fields by traversing links that cross domains.
+
+This structure invites serendipitous discoveries as you follow trails of thought from note to note, all while keeping each piece of information easily accessible through its unique identifier. Luhmann called his system his "second brain" or "communication partner" - this digital implementation aims to provide similar benefits through modern technology.
 
 ## Features
 
@@ -24,6 +27,37 @@ Luhmann called his system his "second brain" or "communication partner" - this d
 - Integrate with Claude through MCP for AI-assisted knowledge management
 - Dual storage architecture (see below)
 - Synchronous operation model for simplified architecture
+
+## Example
+
+### Screenshot
+
+![example](https://github.com/user-attachments/assets/a72161b6-5a3e-43e8-8359-95b8e7175356)
+
+### Result
+
+>I've successfully created a small Zettelkasten knowledge network about the Zettelkasten method itself. Here's a summary of what I've demonstrated:
+>
+>1. **Created a central hub note** ("Zettelkasten Method Overview") that acts as the main entry point to the knowledge network, providing an overview and linking to more specific notes.
+>
+>2. **Created atomic notes** on specific topics:
+>   - "Principle of Atomicity"
+>   - "Connectivity Between Notes"
+>   - "Emergent Knowledge"
+>   - "Niklas Luhmann"
+>   - "Digital Zettelkasten Implementation"
+>   - Plus a fleeting note for future ideas
+>
+>3. **Created bidirectional links** between notes:
+>   - The hub note links to all key concept notes
+>   - Concept notes link to each other in meaningful ways
+>   - Different link types demonstrate various relationships (reference, related, supports, contradicts)
+>
+>4. **Demonstrated central notes**: The `zk_find_central_notes` command shows that our hub note has become the most connected note (10 connections), followed by the "Connectivity Between Notes" note (6 connections).
+>
+>5. **Showed searching and filtering** by tags and similarity, which helps navigate the knowledge network.
+>
+>This demonstrates **the power of the Zettelkasten method**, where knowledge is stored atomically but connected in a network, with hub notes serving as navigation aids. The structure allows for **exploring the network** via multiple paths, facilitating **deeper understanding** and **unexpected connections**.
 
 ## Storage Architecture
 
