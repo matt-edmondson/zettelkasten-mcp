@@ -59,6 +59,20 @@ This structure invites serendipitous discoveries as you follow trails of thought
 >
 >This demonstrates **the power of the Zettelkasten method**, where knowledge is stored atomically but connected in a network, with hub notes serving as navigation aids. The structure allows for **exploring the network** via multiple paths, facilitating **deeper understanding** and **unexpected connections**.
 
+## Link Types
+
+The Zettelkasten MCP server uses a comprehensive semantic linking system that creates meaningful connections between notes. Each link type represents a specific relationship, allowing for a rich, multi-dimensional knowledge graph.
+
+| Primary Link Type | Inverse Link Type | Relationship Description |
+|-------------------|-------------------|--------------------------|
+| `reference` | `reference` | Simple reference to related information (symmetric relationship) |
+| `extends` | `extended_by` | One note builds upon or develops concepts from another |
+| `refines` | `refined_by` | One note clarifies or improves upon another |
+| `contradicts` | `contradicted_by` | One note presents opposing views to another |
+| `questions` | `questioned_by` | One note poses questions about another |
+| `supports` | `supported_by` | One note provides evidence for another |
+| `related` | `related` | Generic relationship (symmetric relationship) |
+
 ## Storage Architecture
 
 This system uses a dual storage approach:
