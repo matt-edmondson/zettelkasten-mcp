@@ -91,8 +91,8 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install dependencies
 uv add "mcp[cli]"
 
-# Install the package in development mode
-uv pip install -e .
+# Install dev dependencies
+uv sync --all-extras
 ```
 
 ## Configuration
@@ -179,6 +179,57 @@ zettelkasten-mcp/
 ├── tests/                # Test suite
 ├── .env.example          # Environment variable template
 └── README.md
+```
+
+## Tests
+
+Comprehensive test suite for Zettelkasten MCP covering all layers of the application from models to the MCP server implementation.
+
+### How to Run the Tests
+
+From the project root directory, run:
+
+#### Using pytest directly
+```bash
+python -m pytest -v tests/
+```
+
+#### Using UV
+```bash
+uv run pytest -v tests/
+```
+
+#### With coverage report
+```bash
+uv run pytest --cov=zettelkasten_mcp --cov-report=term-missing tests/
+```
+
+#### Running a specific test file
+```bash
+uv run pytest -v tests/test_models.py
+```
+
+#### Running a specific test class
+```bash
+uv run pytest -v tests/test_models.py::TestNoteModel
+```
+
+#### Running a specific test function
+```bash
+uv run pytest -v tests/test_models.py::TestNoteModel::test_note_validation
+```
+
+### Tests Directory Structure
+
+```
+tests/
+├── conftest.py - Common fixtures for all tests
+├── test_models.py - Tests for data models
+├── test_note_repository.py - Tests for note repository
+├── test_zettel_service.py - Tests for zettel service
+├── test_search_service.py - Tests for search service
+├── test_mcp_server.py - Tests for MCP server tools
+└── test_integration.py - Integration tests for the entire system
 ```
 
 ## Important Notice
