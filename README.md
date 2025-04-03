@@ -59,6 +59,16 @@ This structure invites serendipitous discoveries as you follow trails of thought
 >
 >This demonstrates **the power of the Zettelkasten method**, where knowledge is stored atomically but connected in a network, with hub notes serving as navigation aids. The structure allows for **exploring the network** via multiple paths, facilitating **deeper understanding** and **unexpected connections**.
 
+## Note Types
+
+The Zettelkasten MCP server supports different types of notes:
+
+1. **Fleeting notes** (fleeting): Quick, temporary notes for capturing ideas
+2. **Literature notes** (literature): Notes from reading material
+3. **Permanent notes** (permanent): Well-formulated, evergreen notes
+4. **Structure notes** (structure): Index or outline notes that organize other notes
+5. **Hub notes** (hub): Entry points to the Zettelkasten on key topics
+
 ## Link Types
 
 The Zettelkasten MCP server uses a comprehensive semantic linking system that creates meaningful connections between notes. Each link type represents a specific relationship, allowing for a rich, multi-dimensional knowledge graph.
