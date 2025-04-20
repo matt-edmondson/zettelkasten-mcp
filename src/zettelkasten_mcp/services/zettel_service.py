@@ -595,8 +595,17 @@ class ZettelService:
                 bidirectional = op.get('bidirectional', False)
                 bidirectional_type = op.get('bidirectional_type')
                 
+                # Verify both notes exist before attempting to link
+                source_note = self.repository.get(source_id)
+                if not source_note:
+                    raise ValueError(f"Source note with ID {source_id} not found")
+                
+                target_note = self.repository.get(target_id)
+                if not target_note:
+                    raise ValueError(f"Target note with ID {target_id} not found")
+                
                 # Create the link
-                source_note, target_note = self.create_link(
+                updated_source, updated_target = self.create_link(
                     source_id=source_id,
                     target_id=target_id,
                     link_type=link_type,
@@ -605,11 +614,22 @@ class ZettelService:
                     bidirectional_type=bidirectional_type
                 )
                 
+                # Create a description of what was done
+                link_description = f"{source_note.title} -> {target_note.title}"
+                if bidirectional:
+                    if updated_target:
+                        link_description += f" [{link_type} (bidirectional)]"
+                    else:
+                        link_description += f" [{link_type} (bidirectional link already existed)]"
+                else:
+                    link_description += f" [{link_type}]"
+                
                 results.append(
                     BatchOperationResult(
                         success=True,
                         item_id=f"{source_id}-{target_id}",
-                        result=(source_note, target_note)
+                        result=(updated_source, updated_target),
+                        error=None
                     )
                 )
             except Exception as e:
