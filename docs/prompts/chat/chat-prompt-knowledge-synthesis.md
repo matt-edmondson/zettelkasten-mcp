@@ -1,20 +1,24 @@
-I've attached information that might help synthesize ideas in my Zettelkasten. Please:
+I'd like you to synthesize the knowledge in my Zettelkasten on the following topic or question:
 
-1. Find opportunities for synthesis by identifying:
-   - Potential bridges between currently unconnected areas in my system
-   - Contradictions that this information might help resolve
-   - Incomplete chains of thought that could now be extended
+[TOPIC OR QUESTION]
 
-2. For the most promising synthesis opportunities (3-5 max):
-   - Create new permanent notes capturing the higher-order insights
-   - Connect these synthesis notes to the contributing notes with appropriate link types
-   - Update or create structure notes as needed
+As you work:
 
-3. Identify any relevant fleeting notes that should be converted to permanent notes in light of this synthesis
+1. Use the tools to discover all related notes, following links and tags recursively
+2. Identify the key concepts and how they connect to each other
+3. Synthesize this information into a comprehensive response that:
+   - Addresses my topic/question directly
+   - Integrates ideas from multiple notes
+   - Identifies patterns and insights across notes
+   - Highlights any contradictions or gaps
+   - Suggests potential new connections or areas for exploration
 
-4. Based on this synthesis work, highlight:
-   - New questions that have emerged
-   - Knowledge gaps revealed
-   - Potential applications of the new understanding
+4. Include explicit references to the note IDs you're drawing from (e.g., "As noted in 202101010001...")
 
-Provide a summary of the insights discovered, notes created, and connections established through this synthesis process.
+5. At the end of your response, suggest how I might:
+   - Improve the organization of these notes
+   - Fill important knowledge gaps
+   - Create new structure notes if needed
+   - Consider exporting this knowledge as a standalone collection using `zk_export_knowledge_base`
+
+Please structure your response to build understanding progressively, starting with foundational concepts and moving to more complex ideas.
