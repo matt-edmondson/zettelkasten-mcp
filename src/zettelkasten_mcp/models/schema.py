@@ -5,7 +5,7 @@ import datetime
 import random
 import inspect
 from enum import Enum
-from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union, TypedDict
 from pydantic import BaseModel, Field, field_validator
 
 def generate_id() -> str:
@@ -202,3 +202,35 @@ class BatchResult(BaseModel, Generic[T, I]):
     success_count: int 
     failure_count: int
     results: List[BatchOperationResult[T, I]]
+
+# TypedDict definitions for batch operations
+class NoteData(TypedDict, total=False):
+    """Schema for note creation data."""
+    title: str  # required
+    content: str  # required
+    note_type: str
+    tags: str
+    metadata: Dict[str, str]
+
+class NoteUpdateData(TypedDict, total=False):
+    """Schema for note update data."""
+    note_id: str  # required
+    title: Optional[str]
+    content: Optional[str]
+    note_type: Optional[str]
+    tags: Optional[str]
+    metadata: Optional[Dict[str, str]]
+
+class LinkData(TypedDict, total=False):
+    """Schema for link creation data."""
+    source_id: str  # required
+    target_id: str  # required
+    link_type: str
+    description: Optional[str]
+    bidirectional: bool
+    bidirectional_type: Optional[str]
+
+class TagOperationData(TypedDict, total=False):
+    """Schema for tag operations."""
+    note_id: str  # required
+    tags: str  # required

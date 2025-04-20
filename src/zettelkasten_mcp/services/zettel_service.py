@@ -1,13 +1,11 @@
 """Service layer for Zettelkasten operations."""
 import datetime
 import logging
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
-from zettelkasten_mcp.config import config
 from zettelkasten_mcp.models.schema import (
-    BatchOperationResult, BatchResult, Link, LinkType, Note, NoteType, Tag
+    BatchOperationResult, BatchResult, LinkData, LinkType, 
+    Note, NoteData, NoteType, NoteUpdateData, Tag, TagOperationData
 )
 from zettelkasten_mcp.storage.note_repository import NoteRepository
 
@@ -319,7 +317,7 @@ class ZettelService:
     
     def batch_create_notes(
         self, 
-        notes_data: List[Dict[str, Any]]
+        notes_data: List[NoteData]
     ) -> BatchResult[Note, str]:
         """Create multiple notes in a batch operation.
         
@@ -327,8 +325,8 @@ class ZettelService:
             notes_data: List of dictionaries containing note data with keys:
                 - title: Note title (required)
                 - content: Note content (required)
-                - note_type: NoteType enum value (optional)
-                - tags: List of tags (optional)
+                - note_type: Type of note (optional, string)
+                - tags: Comma-separated list of tags (optional, string)
                 - metadata: Dict of metadata (optional)
         
         Returns:
@@ -389,7 +387,7 @@ class ZettelService:
     
     def batch_update_notes(
         self, 
-        updates: List[Dict[str, Any]]
+        updates: List[NoteUpdateData]
     ) -> BatchResult[Note, str]:
         """Update multiple notes in a batch operation.
         
@@ -398,8 +396,8 @@ class ZettelService:
                 - note_id: ID of the note to update (required)
                 - title: New title (optional)
                 - content: New content (optional)
-                - note_type: New NoteType (optional)
-                - tags: New list of tags (optional)
+                - note_type: New note type (optional, string)
+                - tags: New comma-separated list of tags (optional, string)
                 - metadata: New metadata dict (optional)
         
         Returns:
@@ -499,14 +497,14 @@ class ZettelService:
     
     def batch_add_tags(
         self, 
-        tag_operations: List[Dict[str, Any]]
+        tag_operations: List[TagOperationData]
     ) -> BatchResult[Note, str]:
         """Add tags to multiple notes in a batch operation.
         
         Args:
             tag_operations: List of dicts containing:
                 - note_id: ID of the note (required)
-                - tags: List of tags to add (required)
+                - tags: Comma-separated list of tags to add (required)
                 
         Returns:
             BatchResult with success/failure counts and updated notes
@@ -563,7 +561,7 @@ class ZettelService:
     
     def batch_create_links(
         self, 
-        link_operations: List[Dict[str, Any]]
+        link_operations: List[LinkData]
     ) -> BatchResult[Tuple[Note, Optional[Note]], str]:
         """Create links between notes in a batch operation.
         
@@ -571,10 +569,10 @@ class ZettelService:
             link_operations: List of dicts containing:
                 - source_id: ID of source note (required)
                 - target_id: ID of target note (required)
-                - link_type: Type of link (optional)
+                - link_type: Type of link (optional, string)
                 - description: Link description (optional)
                 - bidirectional: Whether to create bidirectional link (optional)
-                - bidirectional_type: Type for reverse link (optional)
+                - bidirectional_type: Type for reverse link (optional, string)
                 
         Returns:
             BatchResult with success/failure counts and link results
