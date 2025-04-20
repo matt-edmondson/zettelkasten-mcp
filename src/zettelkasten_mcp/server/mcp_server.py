@@ -603,11 +603,11 @@ class ZettelkastenMcpServer:
         ) -> str:
             """Create multiple notes in a batch operation.
             Args:
-                notes: List of note objects, each with:
-                    - title: Note title (required)
-                    - content: Note content (required) 
-                    - note_type: Type of note (optional, default: "permanent")
-                    - tags: Comma-separated list of tags (optional)
+                notes: List of note objects, each with keys:
+                    - title (required): Note title
+                    - content (required): Note content
+                    - note_type (optional): Type of note (default: "permanent")
+                    - tags (optional): Comma-separated list of tags
             
             Example:
                 [
@@ -622,6 +622,11 @@ class ZettelkastenMcpServer:
                     # Extract required fields
                     title = note.get("title")
                     content = note.get("content")
+                    
+                    if not title:
+                        raise ValueError("Title is required for each note")
+                    if not content:
+                        raise ValueError("Content is required for each note")
                     
                     # Extract optional fields
                     note_type_str = note.get("note_type", "permanent")
