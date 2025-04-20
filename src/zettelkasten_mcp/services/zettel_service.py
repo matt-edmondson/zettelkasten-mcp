@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from zettelkasten_mcp.models.schema import (
     BatchOperationResult, BatchResult, LinkType, 
-    Note, NoteType, Tag
+    Note, NoteType, Tag, NoteData, NoteUpdateData, TagOperationData, LinkData
 )
 from zettelkasten_mcp.storage.note_repository import NoteRepository
 
