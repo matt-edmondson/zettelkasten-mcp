@@ -636,16 +636,21 @@ class ZettelService:
             results=results
         )
     
-    def export_knowledge_base(self, export_dir: str, clean_dir: bool = True) -> Path:
+    def export_knowledge_base(self, export_dir: Optional[str] = None, clean_dir: bool = True) -> Path:
         """Export the entire knowledge base to a directory of markdown files.
         
         Args:
-            export_dir: Directory to export to
+            export_dir: Directory to export to (optional, defaults to config.export_dir)
             clean_dir: Whether to clean the directory before export
             
         Returns:
             Path to the export directory
         """
         from zettelkasten_mcp.services.export_service import ExportService
+        
+        # Use default from config if not specified
+        if export_dir is None:
+            export_dir = str(config.get_absolute_path(config.export_dir))
+            
         export_service = ExportService(zettel_service=self)
         return export_service.export_to_markdown(export_dir, clean_dir)
