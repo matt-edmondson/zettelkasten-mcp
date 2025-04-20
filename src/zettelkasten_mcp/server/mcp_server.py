@@ -596,8 +596,38 @@ class ZettelkastenMcpServer:
                 logger.error(f"Failed to rebuild index: {e}", exc_info=True)
                 return self.format_error_response(e)
         
-        # Batch create notes
-        @self.mcp.tool(name="zk_batch_create_notes")
+        @self.mcp.tool(
+            name="zk_batch_create_notes",
+            parameters={
+                "notes": {
+                    "type": "array",
+                    "description": "List of note objects to create",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "description": "Note title (required)"
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Note content (required)"
+                            },
+                            "note_type": {
+                                "type": "string",
+                                "description": "Type of note (optional, default: 'permanent')",
+                                "default": "permanent"
+                            },
+                            "tags": {
+                                "type": "string",
+                                "description": "Comma-separated list of tags (optional)"
+                            }
+                        },
+                        "required": ["title", "content"]
+                    }
+                }
+            }
+        )
         def zk_batch_create_notes(notes: List[Dict[str, Any]]) -> str:
             """Create multiple notes in a batch operation.
             Args:
@@ -662,7 +692,41 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Batch update notes
-        @self.mcp.tool(name="zk_batch_update_notes")
+        @self.mcp.tool(
+            name="zk_batch_update_notes",
+            parameters={
+                "updates": {
+                    "type": "array",
+                    "description": "List of note update objects",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "note_id": {
+                                "type": "string",
+                                "description": "ID of the note to update (required)"
+                            },
+                            "title": {
+                                "type": "string",
+                                "description": "New title (optional)"
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "New content (optional)"
+                            },
+                            "note_type": {
+                                "type": "string",
+                                "description": "New note type (optional)"
+                            },
+                            "tags": {
+                                "type": "string",
+                                "description": "New comma-separated list of tags (optional)"
+                            }
+                        },
+                        "required": ["note_id"]
+                    }
+                }
+            }
+        )
         def zk_batch_update_notes(updates: List[Dict[str, Any]]) -> str:
             """Update multiple notes in a batch operation.
             Args:
@@ -733,7 +797,18 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Batch delete notes
-        @self.mcp.tool(name="zk_batch_delete_notes")
+        @self.mcp.tool(
+            name="zk_batch_delete_notes",
+            parameters={
+                "ids": {
+                    "type": "array",
+                    "description": "List of note IDs to delete",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        )
         def zk_batch_delete_notes(ids: List[str]) -> str:
             """Delete multiple notes in a batch operation.
             Args:
@@ -762,7 +837,43 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Batch create links
-        @self.mcp.tool(name="zk_batch_create_links")
+        @self.mcp.tool(
+            name="zk_batch_create_links",
+            parameters={
+                "links": {
+                    "type": "array",
+                    "description": "List of link objects to create",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source_id": {
+                                "type": "string",
+                                "description": "ID of source note (required)"
+                            },
+                            "target_id": {
+                                "type": "string",
+                                "description": "ID of target note (required)"
+                            },
+                            "link_type": {
+                                "type": "string",
+                                "description": "Type of link (optional, default: 'reference')",
+                                "default": "reference"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Link description (optional)"
+                            },
+                            "bidirectional": {
+                                "type": "boolean",
+                                "description": "Whether to create a reciprocal link (optional)",
+                                "default": False
+                            }
+                        },
+                        "required": ["source_id", "target_id"]
+                    }
+                }
+            }
+        )
         def zk_batch_create_links(links: List[Dict[str, Any]]) -> str:
             """Create multiple links between notes in a batch operation.
             Args:
@@ -835,9 +946,35 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
                 
         # Batch search by text
-        @self.mcp.tool(name="zk_batch_search_by_text")
+        @self.mcp.tool(
+            name="zk_batch_search_by_text",
+            parameters={
+                "queries": {
+                    "type": "array",
+                    "description": "List of search query strings",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "include_content": {
+                    "type": "boolean",
+                    "description": "Whether to search in content",
+                    "default": True
+                },
+                "include_title": {
+                    "type": "boolean",
+                    "description": "Whether to search in titles",
+                    "default": True
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of results per query",
+                    "default": 5
+                }
+            }
+        )
         def zk_batch_search_by_text(queries: List[str], include_content: bool = True, 
-                                   include_title: bool = True, limit: int = 5) -> str:
+                                  include_title: bool = True, limit: int = 5) -> str:
             """Perform multiple text searches in a batch operation.
             Args:
                 queries: List of search query strings
