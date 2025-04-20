@@ -205,8 +205,8 @@ class SearchService:
     
     def find_notes_by_date_range(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
         use_updated: bool = False
     ) -> List[Note]:
         """Find notes created or updated within a date range."""
@@ -250,8 +250,8 @@ class SearchService:
         text: Optional[str] = None,
         tags: Optional[List[str]] = None,
         note_type: Optional[NoteType] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
     ) -> List[SearchResult]:
         """Perform a combined search with multiple criteria."""
         # Start with all notes
