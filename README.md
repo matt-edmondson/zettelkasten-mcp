@@ -197,6 +197,11 @@ All tools have been prefixed with `zk_` for better organization:
 | `zk_find_orphaned_notes` | Find notes with no connections |
 | `zk_list_notes_by_date` | List notes by creation/update date |
 | `zk_rebuild_index` | Rebuild the database index from Markdown files |
+| `zk_batch_create_notes` | Create multiple notes in a single operation |
+| `zk_batch_update_notes` | Update multiple notes in a single operation |
+| `zk_batch_delete_notes` | Delete multiple notes in a single operation |
+| `zk_batch_create_links` | Create multiple links between notes in a single operation |
+| `zk_batch_search_by_text` | Perform multiple text searches in a single operation |
 
 ## Project Structure
 
