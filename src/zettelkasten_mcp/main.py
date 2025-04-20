@@ -64,6 +64,8 @@ def main():
     notes_dir.mkdir(parents=True, exist_ok=True)
     db_dir = config.get_absolute_path(config.database_path).parent
     db_dir.mkdir(parents=True, exist_ok=True)
+    export_dir = config.get_absolute_path(config.export_dir)
+    export_dir.mkdir(parents=True, exist_ok=True)
     
     # Initialize database schema
     try:
