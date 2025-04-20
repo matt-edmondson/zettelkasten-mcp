@@ -911,6 +911,10 @@ class ZettelkastenMcpServer:
                             bidirectional=bidirectional
                         )
                         
+                        # If unidirectional, the target note does not get returned as it was not updated
+                        if target_note is None:
+                            target_note = self.zettel_service.get_note(str(target_id))
+
                         results.append({
                             "success": True,
                             "source": source_id,
