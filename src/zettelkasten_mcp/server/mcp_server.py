@@ -599,10 +599,10 @@ class ZettelkastenMcpServer:
         
         # Batch create notes
         @self.mcp.tool(name="zk_batch_create_notes")
-        def zk_batch_create_notes(notes_data: str) -> str:
+        def zk_batch_create_notes(notes_data: Union[str, List[Dict[str, Any]]]) -> str:
             """Create multiple notes in a batch operation.
             Args:
-                notes_data: JSON string containing an array of note objects, each with:
+                notes_data: JSON string or list containing an array of note objects, each with:
                     - title: Note title (required)
                     - content: Note content (required) 
                     - note_type: Type of note (optional, default: "permanent")
@@ -615,13 +615,17 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Parse the JSON input
-                try:
-                    notes = json.loads(notes_data)
-                    if not isinstance(notes, list):
-                        return "Error: Input must be a JSON array of note objects"
-                except json.JSONDecodeError:
-                    return "Error: Invalid JSON format"
+                # Parse the JSON input if it's a string
+                notes = notes_data
+                if isinstance(notes_data, str):
+                    try:
+                        notes = json.loads(notes_data)
+                    except json.JSONDecodeError:
+                        return "Error: Invalid JSON format"
+                
+                # Validate that we have a list
+                if not isinstance(notes, list):
+                    return "Error: Input must be a JSON array of note objects"
                 
                 # Process each note
                 processed_notes = []
@@ -690,10 +694,10 @@ class ZettelkastenMcpServer:
 
         # Batch update notes
         @self.mcp.tool(name="zk_batch_update_notes")
-        def zk_batch_update_notes(updates_data: str) -> str:
+        def zk_batch_update_notes(updates_data: Union[str, List[Dict[str, Any]]]) -> str:
             """Update multiple notes in a batch operation.
             Args:
-                updates_data: JSON string containing an array of note update objects, each with:
+                updates_data: JSON string or list containing an array of note update objects, each with:
                     - note_id: ID of the note to update (required)
                     - title: New title (optional)
                     - content: New content (optional)
@@ -707,13 +711,17 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Parse the JSON input
-                try:
-                    updates = json.loads(updates_data)
-                    if not isinstance(updates, list):
-                        return "Error: Input must be a JSON array of update objects"
-                except json.JSONDecodeError:
-                    return "Error: Invalid JSON format"
+                # Parse the JSON input if it's a string
+                updates = updates_data
+                if isinstance(updates_data, str):
+                    try:
+                        updates = json.loads(updates_data)
+                    except json.JSONDecodeError:
+                        return "Error: Invalid JSON format"
+                
+                # Validate that we have a list
+                if not isinstance(updates, list):
+                    return "Error: Input must be a JSON array of update objects"
                 
                 # Process each update
                 processed_updates = []
@@ -798,22 +806,26 @@ class ZettelkastenMcpServer:
 
         # Batch delete notes
         @self.mcp.tool(name="zk_batch_delete_notes")
-        def zk_batch_delete_notes(note_ids: str) -> str:
+        def zk_batch_delete_notes(note_ids: Union[str, List[str]]) -> str:
             """Delete multiple notes in a batch operation.
             Args:
-                note_ids: JSON string array of note IDs to delete
+                note_ids: JSON string or list array of note IDs to delete
                 
             Example:
                 ["20230101120000", "20230102120000"]
             """
             try:
-                # Parse the JSON input
-                try:
-                    ids = json.loads(note_ids)
-                    if not isinstance(ids, list):
-                        return "Error: Input must be a JSON array of note IDs"
-                except json.JSONDecodeError:
-                    return "Error: Invalid JSON format"
+                # Parse the JSON input if it's a string
+                ids = note_ids
+                if isinstance(note_ids, str):
+                    try:
+                        ids = json.loads(note_ids)
+                    except json.JSONDecodeError:
+                        return "Error: Invalid JSON format"
+                
+                # Validate that we have a list
+                if not isinstance(ids, list):
+                    return "Error: Input must be a JSON array of note IDs"
                 
                 # Process each deletion
                 results = []
@@ -862,10 +874,10 @@ class ZettelkastenMcpServer:
 
         # Batch create links
         @self.mcp.tool(name="zk_batch_create_links")
-        def zk_batch_create_links(links_data: str) -> str:
+        def zk_batch_create_links(links_data: Union[str, List[Dict[str, Any]]]) -> str:
             """Create multiple links between notes in a batch operation.
             Args:
-                links_data: JSON string containing an array of link objects, each with:
+                links_data: JSON string or list containing an array of link objects, each with:
                     - source_id: ID of source note (required)
                     - target_id: ID of target note (required)
                     - link_type: Type of link (optional, default: "reference")
@@ -879,16 +891,17 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Import JSON if not already imported
-                import json
+                # Parse the JSON input if it's a string
+                links = links_data
+                if isinstance(links_data, str):
+                    try:
+                        links = json.loads(links_data)
+                    except json.JSONDecodeError:
+                        return "Error: Invalid JSON format"
                 
-                # Parse the JSON input
-                try:
-                    links = json.loads(links_data)
-                    if not isinstance(links, list):
-                        return "Error: Input must be a JSON array of link objects"
-                except json.JSONDecodeError:
-                    return "Error: Invalid JSON format"
+                # Validate that we have a list
+                if not isinstance(links, list):
+                    return "Error: Input must be a JSON array of link objects"
                 
                 # Process each link
                 results = []
@@ -967,11 +980,14 @@ class ZettelkastenMcpServer:
                 
         # Batch search by text
         @self.mcp.tool(name="zk_batch_search_by_text")
-        def zk_batch_search_by_text(queries_data: str) -> str:
+        def zk_batch_search_by_text(queries_data: Union[str, List[str], Dict[str, Any]]) -> str:
             """Perform multiple text searches in a batch operation.
             Args:
-                queries_data: JSON string containing an array of search queries, or
-                              a JSON object with queries array and options
+                queries_data: JSON string, list of queries, or dict with:
+                    - queries: Array of search queries
+                    - include_content: Whether to search in content (default: true)
+                    - include_title: Whether to search in titles (default: true)
+                    - limit: Maximum number of results per query (default: 5)
                 
             Example array format:
                 ["search term 1", "search term 2"]
@@ -985,30 +1001,31 @@ class ZettelkastenMcpServer:
                 }
             """
             try:
-                # Import JSON if not already imported
-                import json
+                # Handle input based on type
+                data = queries_data
                 
-                # Parse the JSON input
-                try:
-                    data = json.loads(queries_data)
-                    
-                    # Handle both array and object formats
-                    queries = data
-                    include_content = True
-                    include_title = True
-                    limit = 5
-                    
-                    if isinstance(data, dict):
-                        queries = data.get("queries", [])
-                        include_content = data.get("include_content", True)
-                        include_title = data.get("include_title", True)
-                        limit = data.get("limit", 5)
-                    
-                    if not isinstance(queries, list):
-                        return "Error: Input must contain an array of search queries"
-                    
-                except json.JSONDecodeError:
-                    return "Error: Invalid JSON format"
+                # Parse JSON if it's a string
+                if isinstance(queries_data, str):
+                    try:
+                        data = json.loads(queries_data)
+                    except json.JSONDecodeError:
+                        return "Error: Invalid JSON format"
+                
+                # Handle both array and object formats
+                queries = data
+                include_content = True
+                include_title = True
+                limit = 5
+                
+                if isinstance(data, dict):
+                    queries = data.get("queries", [])
+                    include_content = data.get("include_content", True)
+                    include_title = data.get("include_title", True)
+                    limit = data.get("limit", 5)
+                
+                # Validate that we have a list of queries
+                if not isinstance(queries, list):
+                    return "Error: Input must contain an array of search queries"
                 
                 # Process each query
                 results = []
