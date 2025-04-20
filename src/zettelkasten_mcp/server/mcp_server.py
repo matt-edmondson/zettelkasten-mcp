@@ -931,46 +931,25 @@ class ZettelkastenMcpServer:
                 
         # Batch search by text
         @self.mcp.tool(name="zk_batch_search_by_text")
-        def zk_batch_search_by_text(queries: Union[List[str], Dict[str, Any]]) -> str:
+        def zk_batch_search_by_text(queries: List[str], include_content: bool = True, 
+                                   include_title: bool = True, limit: int = 5) -> str:
             """Perform multiple text searches in a batch operation.
             Args:
-                queries: Either a list of search query strings, or
-                        a dictionary with configuration:
-                        - queries: List of search queries
-                        - include_content: Whether to search in content (default: true)
-                        - include_title: Whether to search in titles (default: true)
-                        - limit: Maximum number of results per query (default: 5)
-                        
-            Example list format:
-                ["search term 1", "search term 2"]
+                queries: List of search query strings
+                include_content: Whether to search in content (default: true)
+                include_title: Whether to search in titles (default: true)
+                limit: Maximum number of results per query (default: 5)
                 
-            Example object format:
-                {
-                    "queries": ["search term 1", "search term 2"],
-                    "include_content": true,
-                    "include_title": true,
-                    "limit": 5
-                }
+            Example:
+                ["search term 1", "search term 2"]
             """
             try:
-                # Handle both list and dict formats
-                query_list = queries
-                include_content = True
-                include_title = True
-                limit = 5
-                
-                if isinstance(queries, dict):
-                    query_list = queries.get("queries", [])
-                    include_content = queries.get("include_content", True)
-                    include_title = queries.get("include_title", True)
-                    limit = queries.get("limit", 5)
-                
-                if not isinstance(query_list, list):
+                if not isinstance(queries, list):
                     return "Error: Input must contain an array of search queries"
                 
                 # Process each query
                 results = []
-                for query in query_list:
+                for query in queries:
                     try:
                         search_results = self.search_service.search_by_text(
                             query=query,
@@ -995,7 +974,7 @@ class ZettelkastenMcpServer:
                         })
                 
                 # Format response
-                output = f"Batch search completed for {len(query_list)} queries\n\n"
+                output = f"Batch search completed for {len(queries)} queries\n\n"
                 
                 for i, query_result in enumerate(results, 1):
                     if query_result.get("success"):
