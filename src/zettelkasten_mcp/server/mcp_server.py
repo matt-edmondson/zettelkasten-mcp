@@ -1,4 +1,5 @@
 """MCP server implementation for the Zettelkasten."""
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -594,6 +595,480 @@ class ZettelkastenMcpServer:
             except Exception as e:
                 # Provide a detailed error message
                 logger.error(f"Failed to rebuild index: {e}", exc_info=True)
+                return self.format_error_response(e)
+        
+        # Batch create notes
+        @self.mcp.tool(name="zk_batch_create_notes")
+        def zk_batch_create_notes(notes_data: str) -> str:
+            """Create multiple notes in a batch operation.
+            Args:
+                notes_data: JSON string containing an array of note objects, each with:
+                    - title: Note title (required)
+                    - content: Note content (required) 
+                    - note_type: Type of note (optional, default: "permanent")
+                    - tags: Comma-separated list of tags (optional)
+            
+            Example:
+                [
+                    {"title": "Note 1", "content": "Content 1", "note_type": "permanent", "tags": "tag1,tag2"},
+                    {"title": "Note 2", "content": "Content 2"}
+                ]
+            """
+            try:
+                # Parse the JSON input
+                try:
+                    notes = json.loads(notes_data)
+                    if not isinstance(notes, list):
+                        return "Error: Input must be a JSON array of note objects"
+                except json.JSONDecodeError:
+                    return "Error: Invalid JSON format"
+                
+                # Process each note
+                processed_notes = []
+                for note_data in notes:
+                    # Extract required fields
+                    title = note_data.get("title")
+                    content = note_data.get("content")
+                    if not title or not content:
+                        processed_notes.append({
+                            "success": False,
+                            "error": "Title and content are required"
+                        })
+                        continue
+                    
+                    # Extract optional fields
+                    note_type_str = note_data.get("note_type", "permanent")
+                    tags_str = note_data.get("tags", "")
+                    
+                    # Convert note_type
+                    try:
+                        note_type_enum = NoteType(note_type_str.lower())
+                    except ValueError:
+                        processed_notes.append({
+                            "success": False,
+                            "error": f"Invalid note type: {note_type_str}"
+                        })
+                        continue
+                    
+                    # Convert tags
+                    tag_list = []
+                    if tags_str:
+                        tag_list = [t.strip() for t in tags_str.split(",") if t.strip()]
+                    
+                    # Create the note
+                    try:
+                        note = self.zettel_service.create_note(
+                            title=title,
+                            content=content,
+                            note_type=note_type_enum,
+                            tags=tag_list
+                        )
+                        processed_notes.append({
+                            "success": True,
+                            "id": note.id,
+                            "title": note.title
+                        })
+                    except Exception as e:
+                        processed_notes.append({
+                            "success": False,
+                            "error": str(e)
+                        })
+                
+                # Format response
+                success_count = sum(1 for n in processed_notes if n.get("success", False))
+                result = f"Batch note creation completed: {success_count}/{len(notes)} successful\n\n"
+                
+                for i, note_result in enumerate(processed_notes, 1):
+                    if note_result.get("success"):
+                        result += f"{i}. Created: '{note_result['title']}' (ID: {note_result['id']})\n"
+                    else:
+                        result += f"{i}. Failed: {note_result.get('error', 'Unknown error')}\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
+        # Batch update notes
+        @self.mcp.tool(name="zk_batch_update_notes")
+        def zk_batch_update_notes(updates_data: str) -> str:
+            """Update multiple notes in a batch operation.
+            Args:
+                updates_data: JSON string containing an array of note update objects, each with:
+                    - note_id: ID of the note to update (required)
+                    - title: New title (optional)
+                    - content: New content (optional)
+                    - note_type: New note type (optional)
+                    - tags: New comma-separated list of tags (optional)
+                    
+            Example:
+                [
+                    {"note_id": "20230101120000", "title": "Updated Title"},
+                    {"note_id": "20230102120000", "content": "Updated content", "tags": "new_tag,another_tag"}
+                ]
+            """
+            try:
+                # Parse the JSON input
+                try:
+                    updates = json.loads(updates_data)
+                    if not isinstance(updates, list):
+                        return "Error: Input must be a JSON array of update objects"
+                except json.JSONDecodeError:
+                    return "Error: Invalid JSON format"
+                
+                # Process each update
+                processed_updates = []
+                for update in updates:
+                    # Extract required fields
+                    note_id = update.get("note_id")
+                    if not note_id:
+                        processed_updates.append({
+                            "success": False,
+                            "error": "note_id is required"
+                        })
+                        continue
+                    
+                    # Extract optional fields
+                    title = update.get("title")
+                    content = update.get("content")
+                    note_type_str = update.get("note_type")
+                    tags_str = update.get("tags")
+                    
+                    # Validate note exists
+                    note = self.zettel_service.get_note(str(note_id))
+                    if not note:
+                        processed_updates.append({
+                            "success": False,
+                            "id": note_id,
+                            "error": f"Note not found: {note_id}"
+                        })
+                        continue
+                    
+                    # Convert note_type if provided
+                    note_type_enum = None
+                    if note_type_str:
+                        try:
+                            note_type_enum = NoteType(note_type_str.lower())
+                        except ValueError:
+                            processed_updates.append({
+                                "success": False,
+                                "id": note_id,
+                                "error": f"Invalid note type: {note_type_str}"
+                            })
+                            continue
+                    
+                    # Convert tags if provided
+                    tag_list = None
+                    if tags_str is not None:  # Allow empty string to clear tags
+                        tag_list = [t.strip() for t in tags_str.split(",") if t.strip()]
+                    
+                    # Update the note
+                    try:
+                        updated_note = self.zettel_service.update_note(
+                            note_id=note_id,
+                            title=title,
+                            content=content,
+                            note_type=note_type_enum,
+                            tags=tag_list
+                        )
+                        processed_updates.append({
+                            "success": True,
+                            "id": updated_note.id,
+                            "title": updated_note.title
+                        })
+                    except Exception as e:
+                        processed_updates.append({
+                            "success": False,
+                            "id": note_id,
+                            "error": str(e)
+                        })
+                
+                # Format response
+                success_count = sum(1 for u in processed_updates if u.get("success", False))
+                result = f"Batch note update completed: {success_count}/{len(updates)} successful\n\n"
+                
+                for i, update_result in enumerate(processed_updates, 1):
+                    if update_result.get("success"):
+                        result += f"{i}. Updated: ID {update_result['id']} - '{update_result['title']}'\n"
+                    else:
+                        result += f"{i}. Failed: ID {update_result.get('id', 'unknown')} - {update_result.get('error', 'Unknown error')}\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
+        # Batch delete notes
+        @self.mcp.tool(name="zk_batch_delete_notes")
+        def zk_batch_delete_notes(note_ids: str) -> str:
+            """Delete multiple notes in a batch operation.
+            Args:
+                note_ids: JSON string array of note IDs to delete
+                
+            Example:
+                ["20230101120000", "20230102120000"]
+            """
+            try:
+                # Parse the JSON input
+                try:
+                    ids = json.loads(note_ids)
+                    if not isinstance(ids, list):
+                        return "Error: Input must be a JSON array of note IDs"
+                except json.JSONDecodeError:
+                    return "Error: Invalid JSON format"
+                
+                # Process each deletion
+                results = []
+                for note_id in ids:
+                    try:
+                        # Check if note exists
+                        note = self.zettel_service.get_note(str(note_id))
+                        if not note:
+                            results.append({
+                                "success": False,
+                                "id": note_id,
+                                "error": f"Note not found: {note_id}"
+                            })
+                            continue
+                            
+                        # Store title for reporting
+                        title = note.title
+                        
+                        # Delete the note
+                        self.zettel_service.delete_note(str(note_id))
+                        results.append({
+                            "success": True,
+                            "id": note_id,
+                            "title": title
+                        })
+                    except Exception as e:
+                        results.append({
+                            "success": False,
+                            "id": note_id,
+                            "error": str(e)
+                        })
+                
+                # Format response
+                success_count = sum(1 for r in results if r.get("success", False))
+                result = f"Batch note deletion completed: {success_count}/{len(ids)} successful\n\n"
+                
+                for i, del_result in enumerate(results, 1):
+                    if del_result.get("success"):
+                        result += f"{i}. Deleted: ID {del_result['id']} - '{del_result['title']}'\n"
+                    else:
+                        result += f"{i}. Failed: ID {del_result['id']} - {del_result.get('error', 'Unknown error')}\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
+        # Batch create links
+        @self.mcp.tool(name="zk_batch_create_links")
+        def zk_batch_create_links(links_data: str) -> str:
+            """Create multiple links between notes in a batch operation.
+            Args:
+                links_data: JSON string containing an array of link objects, each with:
+                    - source_id: ID of source note (required)
+                    - target_id: ID of target note (required)
+                    - link_type: Type of link (optional, default: "reference")
+                    - description: Link description (optional)
+                    - bidirectional: Whether to create a reciprocal link (optional, default: false)
+                    
+            Example:
+                [
+                    {"source_id": "20230101120000", "target_id": "20230102120000"},
+                    {"source_id": "20230103120000", "target_id": "20230104120000", "link_type": "refines", "description": "Refines the concept", "bidirectional": true}
+                ]
+            """
+            try:
+                # Import JSON if not already imported
+                import json
+                
+                # Parse the JSON input
+                try:
+                    links = json.loads(links_data)
+                    if not isinstance(links, list):
+                        return "Error: Input must be a JSON array of link objects"
+                except json.JSONDecodeError:
+                    return "Error: Invalid JSON format"
+                
+                # Process each link
+                results = []
+                for link_data in links:
+                    # Extract required fields
+                    source_id = link_data.get("source_id")
+                    target_id = link_data.get("target_id")
+                    
+                    if not source_id or not target_id:
+                        results.append({
+                            "success": False,
+                            "error": "source_id and target_id are required"
+                        })
+                        continue
+                    
+                    # Extract optional fields
+                    link_type_str = link_data.get("link_type", "reference")
+                    description = link_data.get("description")
+                    bidirectional = link_data.get("bidirectional", False)
+                    
+                    # Convert link_type
+                    try:
+                        link_type_enum = LinkType(link_type_str.lower())
+                    except ValueError:
+                        results.append({
+                            "success": False,
+                            "source": source_id,
+                            "target": target_id,
+                            "error": f"Invalid link type: {link_type_str}"
+                        })
+                        continue
+                    
+                    # Create the link
+                    try:
+                        source_note, target_note = self.zettel_service.create_link(
+                            source_id=source_id,
+                            target_id=target_id,
+                            link_type=link_type_enum,
+                            description=description,
+                            bidirectional=bidirectional
+                        )
+                        
+                        results.append({
+                            "success": True,
+                            "source": source_id,
+                            "source_title": source_note.title,
+                            "target": target_id,
+                            "target_title": target_note.title,
+                            "link_type": link_type_str,
+                            "bidirectional": bidirectional
+                        })
+                    except Exception as e:
+                        results.append({
+                            "success": False,
+                            "source": source_id,
+                            "target": target_id,
+                            "error": str(e)
+                        })
+                
+                # Format response
+                success_count = sum(1 for r in results if r.get("success", False))
+                result = f"Batch link creation completed: {success_count}/{len(links)} successful\n\n"
+                
+                for i, link_result in enumerate(results, 1):
+                    if link_result.get("success"):
+                        link_desc = f"{link_result['link_type']}" + (" (bidirectional)" if link_result.get("bidirectional") else "")
+                        result += f"{i}. Created: {link_result['source_title']} -> {link_result['target_title']} [{link_desc}]\n"
+                    else:
+                        source = link_result.get('source', 'unknown')
+                        target = link_result.get('target', 'unknown')
+                        result += f"{i}. Failed: {source} -> {target} - {link_result.get('error', 'Unknown error')}\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+                
+        # Batch search by text
+        @self.mcp.tool(name="zk_batch_search_by_text")
+        def zk_batch_search_by_text(queries_data: str) -> str:
+            """Perform multiple text searches in a batch operation.
+            Args:
+                queries_data: JSON string containing an array of search queries, or
+                              a JSON object with queries array and options
+                
+            Example array format:
+                ["search term 1", "search term 2"]
+                
+            Example object format:
+                {
+                    "queries": ["search term 1", "search term 2"],
+                    "include_content": true,
+                    "include_title": true,
+                    "limit": 5
+                }
+            """
+            try:
+                # Import JSON if not already imported
+                import json
+                
+                # Parse the JSON input
+                try:
+                    data = json.loads(queries_data)
+                    
+                    # Handle both array and object formats
+                    queries = data
+                    include_content = True
+                    include_title = True
+                    limit = 5
+                    
+                    if isinstance(data, dict):
+                        queries = data.get("queries", [])
+                        include_content = data.get("include_content", True)
+                        include_title = data.get("include_title", True)
+                        limit = data.get("limit", 5)
+                    
+                    if not isinstance(queries, list):
+                        return "Error: Input must contain an array of search queries"
+                    
+                except json.JSONDecodeError:
+                    return "Error: Invalid JSON format"
+                
+                # Process each query
+                results = []
+                for query in queries:
+                    try:
+                        search_results = self.search_service.search_by_text(
+                            query=query,
+                            include_content=include_content,
+                            include_title=include_title
+                        )
+                        
+                        # Limit results per query
+                        search_results = search_results[:limit]
+                        
+                        results.append({
+                            "success": True,
+                            "query": query,
+                            "count": len(search_results),
+                            "results": search_results
+                        })
+                    except Exception as e:
+                        results.append({
+                            "success": False,
+                            "query": query,
+                            "error": str(e)
+                        })
+                
+                # Format response
+                output = f"Batch search completed for {len(queries)} queries\n\n"
+                
+                for i, query_result in enumerate(results, 1):
+                    if query_result.get("success"):
+                        output += f"{i}. Query: \"{query_result['query']}\"\n"
+                        output += f"   Found: {query_result['count']} results\n"
+                        
+                        # List the results for this query
+                        if query_result['results']:
+                            for j, result in enumerate(query_result['results'], 1):
+                                note = result.note
+                                output += f"   {j}. {note.title} (ID: {note.id})\n"
+                                if note.tags:
+                                    output += f"      Tags: {', '.join(tag.name for tag in note.tags)}\n"
+                                
+                                # Show the score and matched terms
+                                output += f"      Score: {result.score:.2f}\n"
+                                if result.matched_terms:
+                                    output += f"      Matched terms: {', '.join(result.matched_terms)}\n"
+                                
+                                # Add context snippet if available
+                                if result.matched_context:
+                                    output += f"      Context: \"{result.matched_context}\"\n"
+                        else:
+                            output += "   No matches found\n"
+                    else:
+                        output += f"{i}. Query: \"{query_result['query']}\" - Failed: {query_result.get('error', 'Unknown error')}\n"
+                    
+                    output += "\n"
+                
+                return output
+            except Exception as e:
                 return self.format_error_response(e)
 
     def _register_resources(self) -> None:
