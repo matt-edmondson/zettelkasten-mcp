@@ -1071,6 +1071,46 @@ class ZettelkastenMcpServer:
             except Exception as e:
                 return self.format_error_response(e)
 
+        @self.mcp.tool(name="zk_export_knowledge_base")
+        def zk_export_knowledge_base(export_dir: str, clean_dir: bool = True) -> str:
+            """Export the entire knowledge base to a directory of markdown files.
+            
+            This creates a well-formatted, well-linked, markdown collection with human readable
+            filenames and an obvious entrypoint (index.md). The collection is organized by note
+            type (hub, structure, permanent, literature, fleeting) and includes proper cross-links.
+            The output is suitable for uploading as documentation website.
+            
+            Args:
+                export_dir: Directory path to export to
+                clean_dir: Whether to clean the directory before export (default: True)
+            """
+            try:
+                # Export the knowledge base
+                export_path = self.zettel_service.export_knowledge_base(
+                    export_dir=export_dir,
+                    clean_dir=clean_dir
+                )
+                
+                # Count files in the export directory
+                total_files = 0
+                for root, _, files in os.walk(export_path):
+                    total_files += len([f for f in files if f.endswith('.md')])
+                
+                # Return a success message
+                result = f"Knowledge base exported successfully to: {export_path}\n"
+                result += f"Total markdown files created: {total_files}\n\n"
+                result += "Export structure:\n"
+                result += "- index.md (main entry point)\n"
+                result += "- hub_notes/ (entry points into the knowledge base)\n"
+                result += "- structure_notes/ (organizing notes)\n"
+                result += "- permanent_notes/ (well-formulated, evergreen notes)\n"
+                result += "- literature_notes/ (notes from reading material)\n"
+                result += "- fleeting_notes/ (quick, temporary notes)\n\n"
+                result += "You can now upload this directory to any service that hosts markdown files as a website."
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
     def _register_resources(self) -> None:
         """Register MCP resources."""
         # Currently, we don't define resources for the Zettelkasten server
