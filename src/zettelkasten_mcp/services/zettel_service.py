@@ -4,8 +4,8 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from zettelkasten_mcp.models.schema import (
-    BatchOperationResult, BatchResult, LinkData, LinkType, 
-    Note, NoteData, NoteType, NoteUpdateData, Tag, TagOperationData
+    BatchOperationResult, BatchResult, LinkType, 
+    Note, NoteType, Tag
 )
 from zettelkasten_mcp.storage.note_repository import NoteRepository
 

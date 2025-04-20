@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy import exc as sqlalchemy_exc
 from mcp.server.fastmcp import FastMCP
 from zettelkasten_mcp.config import config
-from zettelkasten_mcp.models.schema import LinkType, NoteType, LinkData, NoteData, NoteUpdateData
+from zettelkasten_mcp.models.schema import LinkType, NoteType
 from zettelkasten_mcp.services.search_service import SearchService
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
