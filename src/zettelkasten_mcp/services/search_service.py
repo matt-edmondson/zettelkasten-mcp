@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from zettelkasten_mcp.models.schema import (
     BatchOperationResult, BatchResult, Note, NoteType
 )
+
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
 from sqlalchemy import or_

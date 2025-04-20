@@ -1,12 +1,11 @@
 """Service for exporting Zettelkasten knowledge base to various formats."""
 import logging
-import os
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
-from zettelkasten_mcp.models.schema import Link, LinkType, Note, NoteType, Tag
+from zettelkasten_mcp.models.schema import Note, NoteType
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
 logger = logging.getLogger(__name__)
