@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from zettelkasten_mcp.config import config
 from zettelkasten_mcp.models.schema import Note, NoteType
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
@@ -21,7 +22,7 @@ class ExportService:
         """
         self.zettel_service = zettel_service or ZettelService()
         
-    def export_to_markdown(self, export_dir: str, clean_dir: bool = True) -> Path:
+    def export_to_markdown(self, export_dir: Optional[Path], clean_dir: bool = True) -> Path:
         """Export the entire knowledge base to a directory of markdown files.
         
         Args:
@@ -31,14 +32,19 @@ class ExportService:
         Returns:
             Path to the export directory
         """
-        export_path = Path(export_dir)
+
+        self.export_dir = (
+            config.get_absolute_path(export_dir)
+            if export_dir
+            else config.get_absolute_path(config.export_dir)
+        )
         
         # Create directory if it doesn't exist
-        export_path.mkdir(parents=True, exist_ok=True)
+        export_dir.mkdir(parents=True, exist_ok=True)
         
         # Clean directory if specified
-        if clean_dir and export_path.exists():
-            for item in export_path.iterdir():
+        if clean_dir and export_dir.exists():
+            for item in export_dir.iterdir():
                 if item.is_file():
                     item.unlink()
                 elif item.is_dir():
@@ -46,7 +52,7 @@ class ExportService:
         
         # Get all notes
         notes = self.zettel_service.get_all_notes()
-        logger.info(f"Exporting {len(notes)} notes to {export_path}")
+        logger.info(f"Exporting {len(notes)} notes to {export_dir}")
         
         # Create structure for arranging notes
         hub_notes = []
@@ -81,15 +87,15 @@ class ExportService:
         
         # Create directories for different note types if there are notes of that type
         if hub_notes:
-            (export_path / "hub_notes").mkdir(exist_ok=True)
+            (export_dir / "hub_notes").mkdir(exist_ok=True)
         if structure_notes:
-            (export_path / "structure_notes").mkdir(exist_ok=True)
+            (export_dir / "structure_notes").mkdir(exist_ok=True)
         if permanent_notes:
-            (export_path / "permanent_notes").mkdir(exist_ok=True)
+            (export_dir / "permanent_notes").mkdir(exist_ok=True)
         if literature_notes:
-            (export_path / "literature_notes").mkdir(exist_ok=True)
+            (export_dir / "literature_notes").mkdir(exist_ok=True)
         if fleeting_notes:
-            (export_path / "fleeting_notes").mkdir(exist_ok=True)
+            (export_dir / "fleeting_notes").mkdir(exist_ok=True)
         
         # Second pass: Export all notes with proper links
         for note in notes:
@@ -111,15 +117,15 @@ class ExportService:
             filename = id_to_filename[note.id]
             
             # Create file path
-            file_path = export_path / subdir / filename
+            file_path = export_dir / subdir / filename
             
             # Export note with updated links
             self._export_note_with_links(note, file_path, id_to_filename)
         
         # Create index.md file
-        self._create_index_file(export_path, notes, id_to_filename)
+        self._create_index_file(export_dir, notes, id_to_filename)
         
-        return export_path
+        return export_dir
     
     def _sanitize_filename(self, title: str) -> str:
         """Sanitize a title to use as a filename.
@@ -238,12 +244,12 @@ class ExportService:
             f.write(frontmatter + content)
     
     def _create_index_file(
-        self, export_path: Path, notes: List[Note], id_to_filename: Dict[str, str]
+        self, export_dir: Path, notes: List[Note], id_to_filename: Dict[str, str]
     ) -> None:
         """Create an index.md file as the entry point.
         
         Args:
-            export_path: Path to the export directory
+            export_dir: Path to the export directory
             notes: List of all notes
             id_to_filename: Dictionary mapping note IDs to filenames
         """
@@ -329,6 +335,6 @@ class ExportService:
         content += f"- Total tags: {len(all_tags)}\n"
         
         # Write to file
-        index_path = export_path / "index.md"
+        index_path = export_dir / "index.md"
         with open(index_path, "w", encoding="utf-8") as f:
             f.write(content)

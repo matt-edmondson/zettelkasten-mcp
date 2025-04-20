@@ -10,6 +10,7 @@ from zettelkasten_mcp.config import config
 from zettelkasten_mcp.models.schema import LinkType, NoteType
 from zettelkasten_mcp.services.search_service import SearchService
 from zettelkasten_mcp.services.zettel_service import ZettelService
+from zettelkasten_mcp.services.export_service import ExportService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class ZettelkastenMcpServer:
         # Services
         self.zettel_service = ZettelService()
         self.search_service = SearchService(self.zettel_service)
+        self.export_service = ExportService(self.zettel_service)
         # Initialize services
         self.initialize()
         # Register tools
@@ -1071,7 +1073,7 @@ class ZettelkastenMcpServer:
             """
             try:
                 # Export the knowledge base
-                export_path = self.zettel_service.export_knowledge_base(
+                export_path = self.export_service.export_to_markdown(
                     export_dir=export_dir,
                     clean_dir=clean_dir
                 )
