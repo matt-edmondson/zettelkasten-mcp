@@ -5,7 +5,7 @@ import datetime
 import random
 import inspect
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
 from pydantic import BaseModel, Field, field_validator
 
 def generate_id() -> str:
@@ -185,3 +185,20 @@ class Note(BaseModel):
             tags=tags_str,
             links=links_str
         )
+
+T = TypeVar('T')
+I = TypeVar('I')
+
+class BatchOperationResult(BaseModel, Generic[T, I]):
+    """Results of a batch operation."""
+    success: bool
+    item_id: I 
+    result: Optional[T] = None
+    error: Optional[str] = None
+
+class BatchResult(BaseModel, Generic[T, I]):
+    """Result of a batch operation with summary statistics."""
+    total_count: int
+    success_count: int 
+    failure_count: int
+    results: List[BatchOperationResult[T, I]]
