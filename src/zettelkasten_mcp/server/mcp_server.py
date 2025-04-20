@@ -598,7 +598,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         @self.mcp.tool(name="zk_export_knowledge_base")
-        def zk_export_knowledge_base(export_dir: str, clean_dir: bool = True) -> str:
+        def zk_export_knowledge_base(export_dir: Optional[str] = None, clean_dir: bool = True) -> str:
             """Export the entire knowledge base to a directory of markdown files.
             
             This creates a well-formatted, well-linked, markdown collection with human readable
@@ -607,7 +607,7 @@ class ZettelkastenMcpServer:
             The output is suitable for uploading as documentation website.
             
             Args:
-                export_dir: Directory path to export to
+                export_dir: Directory path to export to (optional, defaults to 'data/export' next to notes directory)
                 clean_dir: Whether to clean the directory before export (default: True)
             """
             try:
