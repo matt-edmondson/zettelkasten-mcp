@@ -3,11 +3,11 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Optional
 from sqlalchemy import exc as sqlalchemy_exc
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 from zettelkasten_mcp.config import config
-from zettelkasten_mcp.models.schema import LinkType, Note, NoteType, Tag
+from zettelkasten_mcp.models.schema import LinkType, NoteType
 from zettelkasten_mcp.services.search_service import SearchService
 from zettelkasten_mcp.services.zettel_service import ZettelService
 

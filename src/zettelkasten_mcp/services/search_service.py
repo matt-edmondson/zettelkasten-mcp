@@ -1,10 +1,10 @@
 """Service for searching and discovering notes in the Zettelkasten."""
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-from sqlalchemy import func, select, text
+from typing import List, Optional, Set, Tuple, Union
+from sqlalchemy import select, text
 
-from zettelkasten_mcp.models.schema import LinkType, Note, NoteType, Tag
+from zettelkasten_mcp.models.schema import Note, NoteType
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
 from sqlalchemy import or_
