@@ -20,6 +20,12 @@ class ZettelkastenConfig(BaseModel):
             os.getenv("ZETTELKASTEN_NOTES_DIR", "data/notes")
         )
     )
+    # Export configuration
+    export_dir: Path = Field(
+        default_factory=lambda: Path(
+            os.getenv("ZETTELKASTEN_EXPORT_DIR", "data/export")
+        )
+    )
     # Database configuration
     database_path: Path = Field(
         default_factory=lambda: Path(
