@@ -33,7 +33,7 @@ class ExportService:
             Path to the export directory
         """
 
-        self.export_dir = (
+        export_dir = (
             config.get_absolute_path(export_dir)
             if export_dir
             else config.get_absolute_path(config.export_dir)
