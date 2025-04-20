@@ -1,13 +1,12 @@
 """MCP server implementation for the Zettelkasten."""
-import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 from sqlalchemy import exc as sqlalchemy_exc
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 from zettelkasten_mcp.config import config
-from zettelkasten_mcp.models.schema import LinkType, Note, NoteType, Tag
+from zettelkasten_mcp.models.schema import LinkType, NoteType
 from zettelkasten_mcp.services.search_service import SearchService
 from zettelkasten_mcp.services.zettel_service import ZettelService
 
@@ -599,10 +598,10 @@ class ZettelkastenMcpServer:
         
         # Batch create notes
         @self.mcp.tool(name="zk_batch_create_notes")
-        def zk_batch_create_notes(notes_data: Union[str, List[Dict[str, Any]]]) -> str:
+        def zk_batch_create_notes(notes: List[Dict[str, Any]]) -> str:
             """Create multiple notes in a batch operation.
             Args:
-                notes_data: JSON string or list containing an array of note objects, each with:
+                notes: List of note objects, each with:
                     - title: Note title (required)
                     - content: Note content (required) 
                     - note_type: Type of note (optional, default: "permanent")
@@ -615,18 +614,6 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Parse the JSON input if it's a string
-                notes = notes_data
-                if isinstance(notes_data, str):
-                    try:
-                        notes = json.loads(notes_data)
-                    except json.JSONDecodeError:
-                        return "Error: Invalid JSON format"
-                
-                # Validate that we have a list
-                if not isinstance(notes, list):
-                    return "Error: Input must be a JSON array of note objects"
-                
                 # Process each note
                 processed_notes = []
                 for note_data in notes:
@@ -694,10 +681,10 @@ class ZettelkastenMcpServer:
 
         # Batch update notes
         @self.mcp.tool(name="zk_batch_update_notes")
-        def zk_batch_update_notes(updates_data: Union[str, List[Dict[str, Any]]]) -> str:
+        def zk_batch_update_notes(updates: List[Dict[str, Any]]) -> str:
             """Update multiple notes in a batch operation.
             Args:
-                updates_data: JSON string or list containing an array of note update objects, each with:
+                updates: List of note update objects, each with:
                     - note_id: ID of the note to update (required)
                     - title: New title (optional)
                     - content: New content (optional)
@@ -711,18 +698,6 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Parse the JSON input if it's a string
-                updates = updates_data
-                if isinstance(updates_data, str):
-                    try:
-                        updates = json.loads(updates_data)
-                    except json.JSONDecodeError:
-                        return "Error: Invalid JSON format"
-                
-                # Validate that we have a list
-                if not isinstance(updates, list):
-                    return "Error: Input must be a JSON array of update objects"
-                
                 # Process each update
                 processed_updates = []
                 for update in updates:
@@ -806,27 +781,15 @@ class ZettelkastenMcpServer:
 
         # Batch delete notes
         @self.mcp.tool(name="zk_batch_delete_notes")
-        def zk_batch_delete_notes(note_ids: Union[str, List[str]]) -> str:
+        def zk_batch_delete_notes(ids: List[str]) -> str:
             """Delete multiple notes in a batch operation.
             Args:
-                note_ids: JSON string or list array of note IDs to delete
+                ids: List of note IDs to delete
                 
             Example:
                 ["20230101120000", "20230102120000"]
             """
             try:
-                # Parse the JSON input if it's a string
-                ids = note_ids
-                if isinstance(note_ids, str):
-                    try:
-                        ids = json.loads(note_ids)
-                    except json.JSONDecodeError:
-                        return "Error: Invalid JSON format"
-                
-                # Validate that we have a list
-                if not isinstance(ids, list):
-                    return "Error: Input must be a JSON array of note IDs"
-                
                 # Process each deletion
                 results = []
                 for note_id in ids:
@@ -874,10 +837,10 @@ class ZettelkastenMcpServer:
 
         # Batch create links
         @self.mcp.tool(name="zk_batch_create_links")
-        def zk_batch_create_links(links_data: Union[str, List[Dict[str, Any]]]) -> str:
+        def zk_batch_create_links(links: List[Dict[str, Any]]) -> str:
             """Create multiple links between notes in a batch operation.
             Args:
-                links_data: JSON string or list containing an array of link objects, each with:
+                links: List of link objects, each with:
                     - source_id: ID of source note (required)
                     - target_id: ID of target note (required)
                     - link_type: Type of link (optional, default: "reference")
@@ -891,18 +854,6 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Parse the JSON input if it's a string
-                links = links_data
-                if isinstance(links_data, str):
-                    try:
-                        links = json.loads(links_data)
-                    except json.JSONDecodeError:
-                        return "Error: Invalid JSON format"
-                
-                # Validate that we have a list
-                if not isinstance(links, list):
-                    return "Error: Input must be a JSON array of link objects"
-                
                 # Process each link
                 results = []
                 for link_data in links:
@@ -980,16 +931,17 @@ class ZettelkastenMcpServer:
                 
         # Batch search by text
         @self.mcp.tool(name="zk_batch_search_by_text")
-        def zk_batch_search_by_text(queries_data: Union[str, List[str], Dict[str, Any]]) -> str:
+        def zk_batch_search_by_text(queries: Union[List[str], Dict[str, Any]]) -> str:
             """Perform multiple text searches in a batch operation.
             Args:
-                queries_data: JSON string, list of queries, or dict with:
-                    - queries: Array of search queries
-                    - include_content: Whether to search in content (default: true)
-                    - include_title: Whether to search in titles (default: true)
-                    - limit: Maximum number of results per query (default: 5)
-                
-            Example array format:
+                queries: Either a list of search query strings, or
+                        a dictionary with configuration:
+                        - queries: List of search queries
+                        - include_content: Whether to search in content (default: true)
+                        - include_title: Whether to search in titles (default: true)
+                        - limit: Maximum number of results per query (default: 5)
+                        
+            Example list format:
                 ["search term 1", "search term 2"]
                 
             Example object format:
@@ -1001,35 +953,24 @@ class ZettelkastenMcpServer:
                 }
             """
             try:
-                # Handle input based on type
-                data = queries_data
-                
-                # Parse JSON if it's a string
-                if isinstance(queries_data, str):
-                    try:
-                        data = json.loads(queries_data)
-                    except json.JSONDecodeError:
-                        return "Error: Invalid JSON format"
-                
-                # Handle both array and object formats
-                queries = data
+                # Handle both list and dict formats
+                query_list = queries
                 include_content = True
                 include_title = True
                 limit = 5
                 
-                if isinstance(data, dict):
-                    queries = data.get("queries", [])
-                    include_content = data.get("include_content", True)
-                    include_title = data.get("include_title", True)
-                    limit = data.get("limit", 5)
+                if isinstance(queries, dict):
+                    query_list = queries.get("queries", [])
+                    include_content = queries.get("include_content", True)
+                    include_title = queries.get("include_title", True)
+                    limit = queries.get("limit", 5)
                 
-                # Validate that we have a list of queries
-                if not isinstance(queries, list):
+                if not isinstance(query_list, list):
                     return "Error: Input must contain an array of search queries"
                 
                 # Process each query
                 results = []
-                for query in queries:
+                for query in query_list:
                     try:
                         search_results = self.search_service.search_by_text(
                             query=query,
@@ -1054,7 +995,7 @@ class ZettelkastenMcpServer:
                         })
                 
                 # Format response
-                output = f"Batch search completed for {len(queries)} queries\n\n"
+                output = f"Batch search completed for {len(query_list)} queries\n\n"
                 
                 for i, query_result in enumerate(results, 1):
                     if query_result.get("success"):
