@@ -2,7 +2,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from sqlalchemy import exc as sqlalchemy_exc
 from mcp.server.fastmcp import FastMCP
 from zettelkasten_mcp.config import config
@@ -817,19 +817,18 @@ class ZettelkastenMcpServer:
                 for i, op_result in enumerate(batch_result.results, 1):
                     if op_result.success:
                         source_note, target_note = op_result.result
-                        link_type = link_operations[i-1].get("link_type").value
-                        is_bidirectional = link_operations[i-1].get("bidirectional", False)
-                        
-                        link_desc = link_type + (" (bidirectional)" if is_bidirectional else "")
-                        result += f"{i}. Created: {source_note.title} -> {target_note.title} [{link_desc}]\n"
+                        item_id_parts = op_result.item_id.split("-")
+                        if len(item_id_parts) >= 2:
+                            idx = i - 1
+                            if idx < len(link_operations):
+                                link_type = link_operations[idx].get("link_type").value
+                                is_bidirectional = link_operations[idx].get("bidirectional", False)
+                                link_desc = link_type + (" (bidirectional)" if is_bidirectional else "")
+                                result += f"{i}. Created: {source_note.title} -> {target_note.title} [{link_desc}]\n"
+                            else:
+                                result += f"{i}. Created: Link between {source_note.id} and {target_note.id}\n"
                     else:
-                        # Get the failed operation
-                        if i-1 < len(link_operations):
-                            source_id = link_operations[i-1].get("source_id", "unknown")
-                            target_id = link_operations[i-1].get("target_id", "unknown")
-                            result += f"{i}. Failed: {source_id} -> {target_id} - {op_result.error}\n"
-                        else:
-                            result += f"{i}. Failed: Unknown operation - {op_result.error}\n"
+                        result += f"{i}. Failed: {op_result.item_id} - {op_result.error}\n"
                 
                 return result
             except Exception as e:

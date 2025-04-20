@@ -1,6 +1,6 @@
 """Service for searching and discovering notes in the Zettelkasten."""
 from dataclasses import dataclass
-from datetime import datetime
+import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from sqlalchemy import func, select, text
 
@@ -233,9 +233,17 @@ class SearchService:
         
         return matching_notes
     
-    def find_similar_notes(self, note_id: str) -> List[Tuple[Note, float]]:
-        """Find notes similar to the given note based on shared tags and links."""
-        return self.zettel_service.find_similar_notes(note_id)
+    def find_similar_notes(self, note_id: str, threshold: float = 0.5) -> List[Tuple[Note, float]]:
+        """Find notes similar to the given note based on shared tags and links.
+        
+        Args:
+            note_id: ID of the reference note
+            threshold: Similarity threshold (0.0-1.0)
+            
+        Returns:
+            List of tuples containing (note, similarity_score)
+        """
+        return self.zettel_service.find_similar_notes(note_id, threshold)
     
     def search_combined(
         self,
@@ -333,7 +341,8 @@ class SearchService:
         self, 
         queries: List[str],
         include_content: bool = True,
-        include_title: bool = True
+        include_title: bool = True,
+        limit: int = 10
     ) -> BatchResult[List[SearchResult], str]:
         """Perform multiple text searches in a batch.
         
@@ -341,6 +350,7 @@ class SearchService:
             queries: List of search query strings
             include_content: Whether to search in content
             include_title: Whether to search in title
+            limit: Maximum number of results per query
             
         Returns:
             BatchResult with results for each query
@@ -354,6 +364,9 @@ class SearchService:
                     include_content=include_content,
                     include_title=include_title
                 )
+                
+                # Apply the limit parameter
+                search_results = search_results[:limit]
                 
                 results.append(
                     BatchOperationResult(
