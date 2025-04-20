@@ -2,7 +2,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy import exc as sqlalchemy_exc
 from mcp.server.fastmcp import FastMCP
 from zettelkasten_mcp.config import config
@@ -599,7 +599,7 @@ class ZettelkastenMcpServer:
         # Batch create notes
         @self.mcp.tool(name="zk_batch_create_notes")
         def zk_batch_create_notes(
-            notes: List[NoteData]
+            notes: list
         ) -> str:
             """Create multiple notes in a batch operation.
             Args:
@@ -616,6 +616,13 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
+                # Log the input for debugging
+                logger.info(f"batch_create_notes received: {notes}")
+                
+                # Check that notes is actually a list
+                if not isinstance(notes, list):
+                    return "Error: 'notes' must be a list of note objects"
+                
                 # Process each note
                 processed_notes = []
                 for note_data in notes:
@@ -679,12 +686,13 @@ class ZettelkastenMcpServer:
                 
                 return result
             except Exception as e:
+                logger.error(f"Error in batch_create_notes: {e}", exc_info=True)
                 return self.format_error_response(e)
 
         # Batch update notes
         @self.mcp.tool(name="zk_batch_update_notes")
         def zk_batch_update_notes(
-            updates: List[NoteUpdateData]
+            updates: list
         ) -> str:
             """Update multiple notes in a batch operation.
             Args:
@@ -786,7 +794,7 @@ class ZettelkastenMcpServer:
         # Batch delete notes
         @self.mcp.tool(name="zk_batch_delete_notes")
         def zk_batch_delete_notes(
-            note_ids: List[str]
+            note_ids: list
         ) -> str:
             """Delete multiple notes in a batch operation.
             Args:
@@ -844,7 +852,7 @@ class ZettelkastenMcpServer:
         # Batch create links
         @self.mcp.tool(name="zk_batch_create_links")
         def zk_batch_create_links(
-            links: List[LinkData]
+            links: list
         ) -> str:
             """Create multiple links between notes in a batch operation.
             Args:
