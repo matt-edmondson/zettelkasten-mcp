@@ -614,66 +614,48 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Process each note
-                processed_notes = []
-                for note_data in notes:
+                # Prepare note data for the service layer
+                notes_data = []
+                for note in notes:
                     # Extract required fields
-                    title = note_data.get("title")
-                    content = note_data.get("content")
-                    if not title or not content:
-                        processed_notes.append({
-                            "success": False,
-                            "error": "Title and content are required"
-                        })
-                        continue
+                    title = note.get("title")
+                    content = note.get("content")
                     
                     # Extract optional fields
-                    note_type_str = note_data.get("note_type", "permanent")
-                    tags_str = note_data.get("tags", "")
+                    note_type_str = note.get("note_type", "permanent")
+                    tags_str = note.get("tags", "")
                     
-                    # Convert note_type
+                    # Convert note_type string to enum
                     try:
                         note_type_enum = NoteType(note_type_str.lower())
                     except ValueError:
-                        processed_notes.append({
-                            "success": False,
-                            "error": f"Invalid note type: {note_type_str}"
-                        })
-                        continue
+                        note_type_enum = NoteType.PERMANENT  # Use default, service will validate
                     
-                    # Convert tags
+                    # Convert tags string to list
                     tag_list = []
                     if tags_str:
                         tag_list = [t.strip() for t in tags_str.split(",") if t.strip()]
                     
-                    # Create the note
-                    try:
-                        note = self.zettel_service.create_note(
-                            title=title,
-                            content=content,
-                            note_type=note_type_enum,
-                            tags=tag_list
-                        )
-                        processed_notes.append({
-                            "success": True,
-                            "id": note.id,
-                            "title": note.title
-                        })
-                    except Exception as e:
-                        processed_notes.append({
-                            "success": False,
-                            "error": str(e)
-                        })
+                    # Add to batch
+                    notes_data.append({
+                        "title": title,
+                        "content": content,
+                        "note_type": note_type_enum,
+                        "tags": tag_list
+                    })
+                
+                # Delegate to service layer
+                batch_result = self.zettel_service.batch_create_notes(notes_data)
                 
                 # Format response
-                success_count = sum(1 for n in processed_notes if n.get("success", False))
-                result = f"Batch note creation completed: {success_count}/{len(notes)} successful\n\n"
+                result = f"Batch note creation completed: {batch_result.success_count}/{batch_result.total_count} successful\n\n"
                 
-                for i, note_result in enumerate(processed_notes, 1):
-                    if note_result.get("success"):
-                        result += f"{i}. Created: '{note_result['title']}' (ID: {note_result['id']})\n"
+                for i, op_result in enumerate(batch_result.results, 1):
+                    if op_result.success:
+                        note = op_result.result
+                        result += f"{i}. Created: '{note.title}' (ID: {note.id})\n"
                     else:
-                        result += f"{i}. Failed: {note_result.get('error', 'Unknown error')}\n"
+                        result += f"{i}. Failed: {op_result.error}\n"
                 
                 return result
             except Exception as e:
@@ -698,33 +680,16 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Process each update
-                processed_updates = []
+                # Prepare update data for the service layer
+                updates_data = []
+                
                 for update in updates:
-                    # Extract required fields
+                    # Extract fields
                     note_id = update.get("note_id")
-                    if not note_id:
-                        processed_updates.append({
-                            "success": False,
-                            "error": "note_id is required"
-                        })
-                        continue
-                    
-                    # Extract optional fields
                     title = update.get("title")
                     content = update.get("content")
                     note_type_str = update.get("note_type")
                     tags_str = update.get("tags")
-                    
-                    # Validate note exists
-                    note = self.zettel_service.get_note(str(note_id))
-                    if not note:
-                        processed_updates.append({
-                            "success": False,
-                            "id": note_id,
-                            "error": f"Note not found: {note_id}"
-                        })
-                        continue
                     
                     # Convert note_type if provided
                     note_type_enum = None
@@ -732,48 +697,36 @@ class ZettelkastenMcpServer:
                         try:
                             note_type_enum = NoteType(note_type_str.lower())
                         except ValueError:
-                            processed_updates.append({
-                                "success": False,
-                                "id": note_id,
-                                "error": f"Invalid note type: {note_type_str}"
-                            })
-                            continue
+                            # Service will handle validation
+                            pass
                     
                     # Convert tags if provided
                     tag_list = None
                     if tags_str is not None:  # Allow empty string to clear tags
                         tag_list = [t.strip() for t in tags_str.split(",") if t.strip()]
                     
-                    # Update the note
-                    try:
-                        updated_note = self.zettel_service.update_note(
-                            note_id=note_id,
-                            title=title,
-                            content=content,
-                            note_type=note_type_enum,
-                            tags=tag_list
-                        )
-                        processed_updates.append({
-                            "success": True,
-                            "id": updated_note.id,
-                            "title": updated_note.title
-                        })
-                    except Exception as e:
-                        processed_updates.append({
-                            "success": False,
-                            "id": note_id,
-                            "error": str(e)
-                        })
+                    # Add to batch
+                    updates_data.append({
+                        "note_id": note_id,
+                        "title": title,
+                        "content": content,
+                        "note_type": note_type_enum,
+                        "tags": tag_list
+                    })
+                
+                # Delegate to service layer
+                batch_result = self.zettel_service.batch_update_notes(updates_data)
                 
                 # Format response
-                success_count = sum(1 for u in processed_updates if u.get("success", False))
-                result = f"Batch note update completed: {success_count}/{len(updates)} successful\n\n"
+                result = f"Batch note update completed: {batch_result.success_count}/{batch_result.total_count} successful\n\n"
                 
-                for i, update_result in enumerate(processed_updates, 1):
-                    if update_result.get("success"):
-                        result += f"{i}. Updated: ID {update_result['id']} - '{update_result['title']}'\n"
+                for i, op_result in enumerate(batch_result.results, 1):
+                    if op_result.success:
+                        note = op_result.result
+                        result += f"{i}. Updated: ID {note.id} - '{note.title}'\n"
                     else:
-                        result += f"{i}. Failed: ID {update_result.get('id', 'unknown')} - {update_result.get('error', 'Unknown error')}\n"
+                        item_id = op_result.item_id
+                        result += f"{i}. Failed: ID {item_id} - {op_result.error}\n"
                 
                 return result
             except Exception as e:
@@ -790,46 +743,19 @@ class ZettelkastenMcpServer:
                 ["20230101120000", "20230102120000"]
             """
             try:
-                # Process each deletion
-                results = []
-                for note_id in ids:
-                    try:
-                        # Check if note exists
-                        note = self.zettel_service.get_note(str(note_id))
-                        if not note:
-                            results.append({
-                                "success": False,
-                                "id": note_id,
-                                "error": f"Note not found: {note_id}"
-                            })
-                            continue
-                            
-                        # Store title for reporting
-                        title = note.title
-                        
-                        # Delete the note
-                        self.zettel_service.delete_note(str(note_id))
-                        results.append({
-                            "success": True,
-                            "id": note_id,
-                            "title": title
-                        })
-                    except Exception as e:
-                        results.append({
-                            "success": False,
-                            "id": note_id,
-                            "error": str(e)
-                        })
+                # Delegate to service layer
+                batch_result = self.zettel_service.batch_delete_notes(ids)
                 
                 # Format response
-                success_count = sum(1 for r in results if r.get("success", False))
-                result = f"Batch note deletion completed: {success_count}/{len(ids)} successful\n\n"
+                result = f"Batch note deletion completed: {batch_result.success_count}/{batch_result.total_count} successful\n\n"
                 
-                for i, del_result in enumerate(results, 1):
-                    if del_result.get("success"):
-                        result += f"{i}. Deleted: ID {del_result['id']} - '{del_result['title']}'\n"
+                for i, op_result in enumerate(batch_result.results, 1):
+                    if op_result.success:
+                        item_id = op_result.item_id
+                        result += f"{i}. Deleted: ID {item_id}\n"
                     else:
-                        result += f"{i}. Failed: ID {del_result['id']} - {del_result.get('error', 'Unknown error')}\n"
+                        item_id = op_result.item_id
+                        result += f"{i}. Failed: ID {item_id} - {op_result.error}\n"
                 
                 return result
             except Exception as e:
@@ -854,76 +780,56 @@ class ZettelkastenMcpServer:
                 ]
             """
             try:
-                # Process each link
-                results = []
-                for link_data in links:
+                # Prepare link data for the service layer
+                link_operations = []
+                
+                for link in links:
                     # Extract required fields
-                    source_id = link_data.get("source_id")
-                    target_id = link_data.get("target_id")
-                    
-                    if not source_id or not target_id:
-                        results.append({
-                            "success": False,
-                            "error": "source_id and target_id are required"
-                        })
-                        continue
+                    source_id = link.get("source_id")
+                    target_id = link.get("target_id")
                     
                     # Extract optional fields
-                    link_type_str = link_data.get("link_type", "reference")
-                    description = link_data.get("description")
-                    bidirectional = link_data.get("bidirectional", False)
+                    link_type_str = link.get("link_type", "reference")
+                    description = link.get("description")
+                    bidirectional = link.get("bidirectional", False)
                     
-                    # Convert link_type
+                    # Convert link_type string to enum
                     try:
                         link_type_enum = LinkType(link_type_str.lower())
                     except ValueError:
-                        results.append({
-                            "success": False,
-                            "source": source_id,
-                            "target": target_id,
-                            "error": f"Invalid link type: {link_type_str}"
-                        })
-                        continue
+                        link_type_enum = LinkType.REFERENCE  # Default value, service will validate
                     
-                    # Create the link
-                    try:
-                        source_note, target_note = self.zettel_service.create_link(
-                            source_id=source_id,
-                            target_id=target_id,
-                            link_type=link_type_enum,
-                            description=description,
-                            bidirectional=bidirectional
-                        )
-                        
-                        results.append({
-                            "success": True,
-                            "source": source_id,
-                            "source_title": source_note.title,
-                            "target": target_id,
-                            "target_title": target_note.title,
-                            "link_type": link_type_str,
-                            "bidirectional": bidirectional
-                        })
-                    except Exception as e:
-                        results.append({
-                            "success": False,
-                            "source": source_id,
-                            "target": target_id,
-                            "error": str(e)
-                        })
+                    # Add to batch
+                    link_operations.append({
+                        "source_id": source_id,
+                        "target_id": target_id,
+                        "link_type": link_type_enum,
+                        "description": description,
+                        "bidirectional": bidirectional
+                    })
+                
+                # Delegate to service layer
+                batch_result = self.zettel_service.batch_create_links(link_operations)
                 
                 # Format response
-                success_count = sum(1 for r in results if r.get("success", False))
-                result = f"Batch link creation completed: {success_count}/{len(links)} successful\n\n"
+                result = f"Batch link creation completed: {batch_result.success_count}/{batch_result.total_count} successful\n\n"
                 
-                for i, link_result in enumerate(results, 1):
-                    if link_result.get("success"):
-                        link_desc = f"{link_result['link_type']}" + (" (bidirectional)" if link_result.get("bidirectional") else "")
-                        result += f"{i}. Created: {link_result['source_title']} -> {link_result['target_title']} [{link_desc}]\n"
+                for i, op_result in enumerate(batch_result.results, 1):
+                    if op_result.success:
+                        source_note, target_note = op_result.result
+                        link_type = link_operations[i-1].get("link_type").value
+                        is_bidirectional = link_operations[i-1].get("bidirectional", False)
+                        
+                        link_desc = link_type + (" (bidirectional)" if is_bidirectional else "")
+                        result += f"{i}. Created: {source_note.title} -> {target_note.title} [{link_desc}]\n"
                     else:
-                        source = link_result.get('source', 'unknown')
-                        target = link_result.get('target', 'unknown')
-                        result += f"{i}. Failed: {source} -> {target} - {link_result.get('error', 'Unknown error')}\n"
+                        # Get the failed operation
+                        if i-1 < len(link_operations):
+                            source_id = link_operations[i-1].get("source_id", "unknown")
+                            target_id = link_operations[i-1].get("target_id", "unknown")
+                            result += f"{i}. Failed: {source_id} -> {target_id} - {op_result.error}\n"
+                        else:
+                            result += f"{i}. Failed: Unknown operation - {op_result.error}\n"
                 
                 return result
             except Exception as e:
@@ -947,43 +853,28 @@ class ZettelkastenMcpServer:
                 if not isinstance(queries, list):
                     return "Error: Input must contain an array of search queries"
                 
-                # Process each query
-                results = []
-                for query in queries:
-                    try:
-                        search_results = self.search_service.search_by_text(
-                            query=query,
-                            include_content=include_content,
-                            include_title=include_title
-                        )
-                        
-                        # Limit results per query
-                        search_results = search_results[:limit]
-                        
-                        results.append({
-                            "success": True,
-                            "query": query,
-                            "count": len(search_results),
-                            "results": search_results
-                        })
-                    except Exception as e:
-                        results.append({
-                            "success": False,
-                            "query": query,
-                            "error": str(e)
-                        })
+                # Delegate to service layer
+                batch_result = self.search_service.batch_search_by_text(
+                    queries=queries,
+                    include_content=include_content,
+                    include_title=include_title,
+                    limit=limit
+                )
                 
                 # Format response
-                output = f"Batch search completed for {len(queries)} queries\n\n"
+                output = f"Batch search completed for {batch_result.total_count} queries - {batch_result.success_count} successful\n\n"
                 
-                for i, query_result in enumerate(results, 1):
-                    if query_result.get("success"):
-                        output += f"{i}. Query: \"{query_result['query']}\"\n"
-                        output += f"   Found: {query_result['count']} results\n"
+                for i, op_result in enumerate(batch_result.results, 1):
+                    if op_result.success:
+                        query = op_result.item_id
+                        search_results = op_result.result
+                        
+                        output += f"{i}. Query: \"{query}\"\n"
+                        output += f"   Found: {len(search_results)} results\n"
                         
                         # List the results for this query
-                        if query_result['results']:
-                            for j, result in enumerate(query_result['results'], 1):
+                        if search_results:
+                            for j, result in enumerate(search_results, 1):
                                 note = result.note
                                 output += f"   {j}. {note.title} (ID: {note.id})\n"
                                 if note.tags:
@@ -1000,7 +891,8 @@ class ZettelkastenMcpServer:
                         else:
                             output += "   No matches found\n"
                     else:
-                        output += f"{i}. Query: \"{query_result['query']}\" - Failed: {query_result.get('error', 'Unknown error')}\n"
+                        query = op_result.item_id
+                        output += f"{i}. Query: \"{query}\" - Failed: {op_result.error}\n"
                     
                     output += "\n"
                 
