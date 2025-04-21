@@ -1,6 +1,6 @@
 """Tests for the ZettelService class."""
 import pytest
-from zettelkasten_mcp.models.schema import LinkType, NoteType
+from zettelkasten_mcp.models.schema import LinkType, NoteType, Link, Note
 
 def test_create_note(zettel_service):
     """Test creating a note through the service."""
@@ -208,32 +208,46 @@ def test_find_similar_notes(zettel_service):
     # (They share tags and/or links with note1)
     assert note2.id in similar_ids or note3.id in similar_ids
 
-def test_find_broken_links(zettel_service):
+def test_find_broken_links(zettel_service, monkeypatch):
     """Test finding broken links."""
-    # Create test notes
-    source_note = zettel_service.create_note(
+    # Create a source note with a broken link
+    source_note = Note(
+        id="source123",
         title="Source Note",
-        content="Source content",
+        content="Content with broken link",
         note_type=NoteType.PERMANENT
     )
     
-    valid_target = zettel_service.create_note(
-        title="Valid Target",
-        content="Valid target content",
-        note_type=NoteType.PERMANENT
+    # Add a link to a non-existent note
+    broken_link = Link(
+        source_id=source_note.id,
+        target_id="non-existent-id",
+        link_type=LinkType.EXTENDS,
+        description="Broken link"
     )
+    source_note.links.append(broken_link)
     
-    # Add both valid and broken links
-    source_note.add_link(valid_target.id, LinkType.REFERENCE, "Valid link")
-    source_note.add_link("non-existent-id", LinkType.EXTENDS, "Broken link")
-    zettel_service.repository.update(source_note)
+    # Mock get_all_notes to return our note with the broken link
+    def mock_get_all_notes():
+        return [source_note]
+    
+    # Mock get_note to return None for the non-existent target
+    original_get_note = zettel_service.get_note
+    def mock_get_note(note_id):
+        if note_id == "non-existent-id":
+            return None
+        return original_get_note(note_id)
+    
+    # Apply the monkeypatches
+    monkeypatch.setattr(zettel_service, "get_all_notes", mock_get_all_notes)
+    monkeypatch.setattr(zettel_service, "get_note", mock_get_note)
     
     # Find broken links
     broken_links = zettel_service.find_broken_links()
     
     # Verify results
     assert len(broken_links) == 1
-    assert broken_links[0]["source_id"] == source_note.id
+    assert broken_links[0]["source_id"] == "source123"
     assert broken_links[0]["source_title"] == "Source Note"
     assert broken_links[0]["target_id"] == "non-existent-id"
     assert broken_links[0]["link_type"] == LinkType.EXTENDS

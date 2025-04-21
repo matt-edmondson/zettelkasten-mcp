@@ -82,7 +82,7 @@ class ZettelkastenMcpServer:
     def _register_tools(self) -> None:
         """Register MCP tools."""
         # Create a new note
-        #@self.mcp.tool(name="zk_create_note")
+        @self.mcp.tool(name="zk_create_note")
         def zk_create_note(
             title: str, 
             content: str, 
@@ -155,7 +155,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Update a note
-        #@self.mcp.tool(name="zk_update_note")
+        @self.mcp.tool(name="zk_update_note")
         def zk_update_note(
             note_id: str,
             title: Optional[str] = None,
@@ -203,7 +203,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Delete a note
-        #@self.mcp.tool(name="zk_delete_note")
+        @self.mcp.tool(name="zk_delete_note")
         def zk_delete_note(note_id: str) -> str:
             """Delete a note.
             Args:
@@ -222,7 +222,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Add a link between notes
-        #@self.mcp.tool(name="zk_create_link")
+        @self.mcp.tool(name="zk_create_link")
         def zk_create_link(
             source_id: str,
             target_id: str,
@@ -265,7 +265,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Remove a link between notes
-        #@self.mcp.tool(name="zk_remove_link")
+        @self.mcp.tool(name="zk_remove_link")
         def zk_remove_link(
             source_id: str,
             target_id: str,
@@ -292,7 +292,7 @@ class ZettelkastenMcpServer:
                 return self.format_error_response(e)
 
         # Search for notes
-        #@self.mcp.tool(name="zk_search_notes")
+        @self.mcp.tool(name="zk_search_notes")
         def zk_search_notes(
             query: Optional[str] = None,
             tags: Optional[str] = None,

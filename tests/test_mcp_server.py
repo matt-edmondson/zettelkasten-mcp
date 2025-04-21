@@ -235,48 +235,25 @@ class TestMcpServer:
         # Check the tool is registered
         assert 'zk_find_broken_links' in self.registered_tools
         
-        # Create mock notes with broken links
-        mock_note1 = MagicMock()
-        mock_note1.id = "note1"
-        mock_note1.title = "Note 1"
+        # Create mock broken links data that would be returned by the service
+        mock_broken_link1 = {
+            "source_id": "note1",
+            "source_title": "Note 1",
+            "target_id": "broken_note",
+            "link_type": LinkType.EXTENDS,
+            "description": "Broken link"
+        }
         
-        mock_note2 = MagicMock()
-        mock_note2.id = "note2"
-        mock_note2.title = "Note 2"
+        mock_broken_link2 = {
+            "source_id": "note2",
+            "source_title": "Note 2",
+            "target_id": "another_broken",
+            "link_type": LinkType.RELATED,
+            "description": None
+        }
         
-        # Create a mix of valid and broken links
-        mock_link1 = MagicMock()
-        mock_link1.source_id = "note1"
-        mock_link1.target_id = "existing_note"
-        mock_link1.link_type = LinkType.REFERENCE
-        mock_link1.description = "Valid link"
-        
-        mock_link2 = MagicMock()
-        mock_link2.source_id = "note1"
-        mock_link2.target_id = "broken_note"
-        mock_link2.link_type = LinkType.EXTENDS
-        mock_link2.description = "Broken link"
-        
-        mock_link3 = MagicMock()
-        mock_link3.source_id = "note2"
-        mock_link3.target_id = "another_broken"
-        mock_link3.link_type = LinkType.RELATED
-        mock_link3.description = None
-        
-        # Assign links to notes
-        mock_note1.links = [mock_link1, mock_link2]
-        mock_note2.links = [mock_link3]
-        
-        # Setup mock responses
-        self.mock_zettel_service.get_all_notes.return_value = [mock_note1, mock_note2]
-        
-        # Setup get_note to return None for broken links
-        def mock_get_note(note_id):
-            if note_id == "existing_note":
-                return MagicMock()
-            return None
-            
-        self.mock_zettel_service.get_note.side_effect = mock_get_note
+        # Setup find_broken_links to return the broken links
+        self.mock_zettel_service.find_broken_links.return_value = [mock_broken_link1, mock_broken_link2]
         
         # Call the tool function
         find_broken_links_func = self.registered_tools['zk_find_broken_links']
@@ -291,9 +268,8 @@ class TestMcpServer:
         assert "Broken link" in result  # Description is included
         
         # Verify service was called correctly
-        self.mock_zettel_service.get_all_notes.assert_called_once()
-        assert self.mock_zettel_service.get_note.call_count == 3  # Called for each link
-        
+        self.mock_zettel_service.find_broken_links.assert_called_once()
+
     def test_batch_get_notes_tool(self):
         """Test the zk_batch_get_notes tool."""
         # Check the tool is registered
@@ -316,32 +292,30 @@ class TestMcpServer:
         mock_note2.note_type = NoteType.PERMANENT
         mock_note2.created_at = datetime(2023, 1, 2, 12, 0, 0)
         mock_note2.updated_at = datetime(2023, 1, 2, 12, 0, 0)
-        mock_note2.tags = [MagicMock(name="tag1"), MagicMock(name="tag2")]
+        # Create proper tag mocks with name attributes
+        tag1 = MagicMock()
+        tag1.name = "tag1"
+        tag2 = MagicMock()
+        tag2.name = "tag2"
+        mock_note2.tags = [tag1, tag2]
         mock_note2.content = "Second note content"
         mock_note2.links = []
         
-        # Setup mock responses
-        def mock_get_note(note_id):
-            if note_id == "20230101120000":
-                return mock_note1
-            elif note_id == "20230102120000":
-                return mock_note2
-            return None
-            
-        def mock_get_note_by_title(title):
-            if title == "Third Note":
-                return MagicMock(id="20230103120000", 
-                                title="Third Note",
-                                note_type=NoteType.PERMANENT,
-                                created_at=datetime(2023, 1, 3, 12, 0, 0),
-                                updated_at=datetime(2023, 1, 3, 12, 0, 0),
-                                tags=[],
-                                content="Third note content",
-                                links=[])
-            return None
-            
-        self.mock_zettel_service.get_note.side_effect = mock_get_note
-        self.mock_zettel_service.get_note_by_title.side_effect = mock_get_note_by_title
+        mock_note3 = MagicMock()
+        mock_note3.id = "20230103120000"
+        mock_note3.title = "Third Note"
+        mock_note3.note_type = NoteType.PERMANENT
+        mock_note3.created_at = datetime(2023, 1, 3, 12, 0, 0)
+        mock_note3.updated_at = datetime(2023, 1, 3, 12, 0, 0)
+        mock_note3.tags = []
+        mock_note3.content = "Third note content"
+        mock_note3.links = []
+        
+        # Setup mock response for batch_get_notes
+        self.mock_zettel_service.batch_get_notes.return_value = (
+            [mock_note1, mock_note2, mock_note3],  # found notes
+            ["not_found"]  # not found identifiers
+        )
         
         # Call the tool function
         batch_get_notes_func = self.registered_tools['zk_batch_get_notes']
@@ -359,7 +333,15 @@ class TestMcpServer:
         assert "tag1" in result
         assert "tag2" in result
         
+        # Verify service was called correctly
+        self.mock_zettel_service.batch_get_notes.assert_called_once_with(
+            ["20230101120000", "20230102120000", "Third Note", "not_found"]
+        )
+        
         # Test with invalid input
+        # Reset mock
+        self.mock_zettel_service.batch_get_notes.reset_mock()
+        
         result_error = batch_get_notes_func("not_a_list")
         assert "Error: note_ids must be a list" in result_error
         
