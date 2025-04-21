@@ -294,10 +294,10 @@ class TestMcpServer:
         self.mock_zettel_service.get_all_notes.assert_called_once()
         assert self.mock_zettel_service.get_note.call_count == 3  # Called for each link
         
-    def test_get_notes_batch_tool(self):
-        """Test the zk_get_notes_batch tool."""
+    def test_batch_get_notes_tool(self):
+        """Test the zk_batch_get_notes tool."""
         # Check the tool is registered
-        assert 'zk_get_notes_batch' in self.registered_tools
+        assert 'zk_batch_get_notes' in self.registered_tools
         
         # Create mock notes
         mock_note1 = MagicMock()
@@ -344,8 +344,8 @@ class TestMcpServer:
         self.mock_zettel_service.get_note_by_title.side_effect = mock_get_note_by_title
         
         # Call the tool function
-        get_notes_batch_func = self.registered_tools['zk_get_notes_batch']
-        result = get_notes_batch_func(["20230101120000", "20230102120000", "Third Note", "not_found"])
+        batch_get_notes_func = self.registered_tools['zk_batch_get_notes']
+        result = batch_get_notes_func(["20230101120000", "20230102120000", "Third Note", "not_found"])
         
         # Verify the result
         assert "Retrieved 3 notes (1 not found)" in result
@@ -360,9 +360,9 @@ class TestMcpServer:
         assert "tag2" in result
         
         # Test with invalid input
-        result_error = get_notes_batch_func("not_a_list")
+        result_error = batch_get_notes_func("not_a_list")
         assert "Error: note_ids must be a list" in result_error
         
         # Test with too many IDs
-        result_too_large = get_notes_batch_func(["id"] * 51)
+        result_too_large = batch_get_notes_func(["id"] * 51)
         assert "Error: Batch size too large" in result_too_large

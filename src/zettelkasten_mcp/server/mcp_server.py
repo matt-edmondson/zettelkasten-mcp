@@ -1136,8 +1136,8 @@ class ZettelkastenMcpServer:
             except Exception as e:
                 return self.format_error_response(e)
 
-        @self.mcp.tool(name="zk_get_notes_batch")
-        def zk_get_notes_batch(note_ids: list) -> str:
+        @self.mcp.tool(name="zk_batch_get_notes")
+        def zk_batch_get_notes(note_ids: list) -> str:
             """Retrieve multiple notes in a single batch operation.
             
             Args:
