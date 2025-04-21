@@ -23,6 +23,19 @@ class ZettelService:
         # The repository is initialized in its constructor
         pass
     
+    def cleanup(self) -> None:
+        """Clean up resources and close connections."""
+        if self.repository:
+            self.repository.close()
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()
+    
     def create_note(
         self,
         title: str,

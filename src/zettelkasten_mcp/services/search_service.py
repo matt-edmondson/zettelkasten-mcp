@@ -31,6 +31,19 @@ class SearchService:
         # Initialize the zettel service if it hasn't been initialized
         self.zettel_service.initialize()
     
+    def cleanup(self) -> None:
+        """Clean up resources and close connections."""
+        if self.zettel_service:
+            self.zettel_service.cleanup()
+            
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()
+    
     def search_by_text(
         self, query: str, include_content: bool = True, include_title: bool = True
     ) -> List[SearchResult]:

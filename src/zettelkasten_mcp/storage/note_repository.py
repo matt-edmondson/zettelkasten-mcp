@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Union
 
 import frontmatter
 from sqlalchemy import and_, create_engine, func, or_, select, text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, sessionmaker
 
 from zettelkasten_mcp.config import config
 from zettelkasten_mcp.models.db_models import (Base, DBLink, DBNote, DBTag,
@@ -27,38 +27,50 @@ class NoteRepository(Repository[Note]):
     """
     
     def __init__(self, notes_dir: Optional[Path] = None):
-        """Initialize the repository."""
-        self.notes_dir = (
-            config.get_absolute_path(notes_dir)
-            if notes_dir
-            else config.get_absolute_path(config.notes_dir)
-        )
+        """Initialize the repository.
         
-        # Ensure directories exist
+        Args:
+            notes_dir: Optional path to notes directory. If not provided, uses config.notes_dir.
+        """
+        # Set up notes directory
+        self.notes_dir = config.get_absolute_path(notes_dir if notes_dir else config.notes_dir)
         self.notes_dir.mkdir(parents=True, exist_ok=True)
         
-        # Initialize database
-        self.engine = init_db()
+        # Set up database
+        self.engine = create_engine(config.get_db_url())
+        Base.metadata.create_all(self.engine)
         self.session_factory = get_session_factory(self.engine)
+        
+        logger.info(f"Initialized NoteRepository with notes_dir: {self.notes_dir}")
         
         # File access lock
         self.file_lock = threading.RLock()
         
         # Initialize by rebuilding index if needed
         self.rebuild_index_if_needed()
+        
+        self.close()
+    
+    def close(self):
+        """Close the database connection."""
+        if hasattr(self, 'engine'):
+            self.engine.dispose()
     
     def rebuild_index_if_needed(self) -> None:
         """Rebuild the database index from files if needed."""
-        # Count notes in database
-        with self.session_factory() as session:
-            db_count = session.scalar(select(text("COUNT(*)")).select_from(DBNote))
-        
-        # Count note files
-        file_count = len(list(self.notes_dir.glob("*.md")))
-        
-        # Rebuild if counts don't match
-        if db_count != file_count:
-            self.rebuild_index()
+        try:
+            # Count notes in database
+            with self.session_factory() as session:
+                db_count = session.scalar(select(text("COUNT(*)")).select_from(DBNote))
+            
+            # Count note files
+            file_count = len(list(self.notes_dir.glob("*.md")))
+            
+            # Rebuild if counts don't match
+            if db_count != file_count:
+                self.rebuild_index()
+        finally:
+            self.close()
     
     def rebuild_index(self) -> None:
         """Rebuild the database index from all markdown files."""
@@ -563,64 +575,99 @@ class NoteRepository(Repository[Note]):
         tag_name = tag.name if isinstance(tag, Tag) else tag
         return self.search(tag=tag_name)
     
-    def find_linked_notes(self, note_id: str, direction: str = "outgoing") -> List[Note]:
-        """Find notes linked to/from this note."""
-        with self.session_factory() as session:
-            if direction == "outgoing":
-                # Find notes that this note links to
-                query = (
-                    select(DBNote)
-                    .join(DBLink, DBNote.id == DBLink.target_id)
-                    .where(DBLink.source_id == note_id)
-                    .options(
-                        joinedload(DBNote.tags),
-                        joinedload(DBNote.outgoing_links),
-                        joinedload(DBNote.incoming_links)
-                    )
-                )
-            elif direction == "incoming":
-                # Find notes that link to this note
-                query = (
-                    select(DBNote)
-                    .join(DBLink, DBNote.id == DBLink.source_id)
-                    .where(DBLink.target_id == note_id)
-                    .options(
-                        joinedload(DBNote.tags),
-                        joinedload(DBNote.outgoing_links),
-                        joinedload(DBNote.incoming_links)
-                    )
-                )
-            elif direction == "both":
-                # Find both directions
-                query = (
-                    select(DBNote)
-                    .join(
-                        DBLink,
-                        or_(
-                            and_(DBNote.id == DBLink.target_id, DBLink.source_id == note_id),
-                            and_(DBNote.id == DBLink.source_id, DBLink.target_id == note_id)
+    def find_linked_notes(self, note_id: str, direction: str = "both", link_type: str = None) -> List[Note]:
+        """Find notes linked to/from the given note.
+
+        Args:
+            note_id: ID of the note to find links for
+            direction: Direction of links to find ("outgoing", "incoming", or "both")
+            link_type: Optional type of links to find
+
+        Returns:
+            List of notes linked to/from the given note
+        """
+        with Session(self.engine) as session:
+            # Base query for outgoing links
+            outgoing_query = (
+                select(DBNote)
+                .join(DBLink, DBLink.target_id == DBNote.id)
+                .where(DBLink.source_id == note_id)
+            )
+
+            # Base query for incoming links
+            incoming_query = (
+                select(DBNote)
+                .join(DBLink, DBLink.source_id == DBNote.id)
+                .where(DBLink.target_id == note_id)
+            )
+
+            # Add link type filter if specified
+            if link_type:
+                outgoing_query = outgoing_query.where(DBLink.link_type == link_type)
+                incoming_query = incoming_query.where(DBLink.link_type == link_type)
+
+            # Get linked notes based on direction
+            linked_notes = []
+            if direction in ["outgoing", "both"]:
+                outgoing_notes = session.scalars(outgoing_query).all()
+                linked_notes.extend(outgoing_notes)
+
+            if direction in ["incoming", "both"]:
+                incoming_notes = session.scalars(incoming_query).all()
+                linked_notes.extend(incoming_notes)
+
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_notes = []
+            for note in linked_notes:
+                if note.id not in seen:
+                    seen.add(note.id)
+                    unique_notes.append(note)
+
+            # Get all links for each note
+            result_notes = []
+            for db_note in unique_notes:
+                # Get outgoing links
+                outgoing_links = session.scalars(
+                    select(DBLink).where(DBLink.source_id == db_note.id)
+                ).all()
+
+                # Get incoming links
+                incoming_links = session.scalars(
+                    select(DBLink).where(DBLink.target_id == db_note.id)
+                ).all()
+
+                # Convert DBLinks to Links
+                links = []
+                for link in outgoing_links + incoming_links:
+                    links.append(
+                        Link(
+                            source_id=link.source_id,
+                            target_id=link.target_id,
+                            link_type=link.link_type,
+                            description=link.description,
+                            created_at=link.created_at
                         )
                     )
-                    .options(
-                        joinedload(DBNote.tags),
-                        joinedload(DBNote.outgoing_links),
-                        joinedload(DBNote.incoming_links)
+
+                # Convert DBTags to Tags
+                tags = [Tag(name=tag.name) for tag in db_note.tags]
+
+                # Create Note object with all links
+                result_notes.append(
+                    Note(
+                        id=db_note.id,
+                        title=db_note.title,
+                        content=db_note.content,
+                        note_type=db_note.note_type,
+                        tags=tags,
+                        created_at=db_note.created_at,
+                        updated_at=db_note.updated_at,
+                        links=links
                     )
                 )
-            else:
-                raise ValueError(f"Invalid direction: {direction}. Use 'outgoing', 'incoming', or 'both'")
-            
-            result = session.execute(query)
-            # Apply unique() to handle the duplicate rows from eager loading
-            db_notes = result.unique().scalars().all()
-            
-            # Convert to model Notes
-            notes = []
-            for db_note in db_notes:
-                note = self.get(db_note.id)
-                if note:
-                    notes.append(note)
-            return notes
+
+            return result_notes
     
     def get_all_tags(self) -> List[Tag]:
         """Get all tags in the system."""
@@ -628,3 +675,72 @@ class NoteRepository(Repository[Note]):
             result = session.execute(select(DBTag))
             db_tags = result.scalars().all()
         return [Tag(name=tag.name) for tag in db_tags]
+
+    def __del__(self):
+        """Clean up database connections when the repository is destroyed."""
+        self.close()
+            
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+
+    def create_link(self, source_id: str, target_id: str, link_type: str = "reference", 
+                    description: Optional[str] = None, bidirectional: bool = False) -> None:
+        """Create a link between two notes.
+        
+        Args:
+            source_id: ID of the source note
+            target_id: ID of the target note
+            link_type: Type of link (reference, extends, refines, etc.)
+            description: Optional description of the link
+            bidirectional: Whether to create a reciprocal link
+            
+        Raises:
+            ValueError: If source or target note doesn't exist
+        """
+        session = self.Session()
+        try:
+            source_note = session.query(DBNote).filter(DBNote.id == source_id).first()
+            target_note = session.query(DBNote).filter(DBNote.id == target_id).first()
+            
+            if not source_note or not target_note:
+                raise ValueError("Source or target note not found")
+                
+            # Check if link already exists
+            existing_link = session.query(DBLink).filter(
+                DBLink.source_id == source_id,
+                DBLink.target_id == target_id
+            ).first()
+            
+            if not existing_link:
+                link = DBLink(
+                    source_id=source_id,
+                    target_id=target_id,
+                    link_type=link_type,
+                    description=description
+                )
+                session.add(link)
+                
+            if bidirectional:
+                # Check if reciprocal link exists
+                reciprocal_link = session.query(DBLink).filter(
+                    DBLink.source_id == target_id,
+                    DBLink.target_id == source_id
+                ).first()
+                
+                if not reciprocal_link:
+                    reciprocal = DBLink(
+                        source_id=target_id,
+                        target_id=source_id,
+                        link_type=link_type,
+                        description=description
+                    )
+                    session.add(reciprocal)
+                    
+            session.commit()
+        finally:
+            session.close()
