@@ -1,6 +1,7 @@
 """Configuration module for the Zettelkasten MCP server."""
 import os
 from pathlib import Path
+from typing import Optional, Union
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -52,11 +53,19 @@ class ZettelkastenConfig(BaseModel):
         )
     )
     
-    def get_absolute_path(self, path: Path) -> Path:
-        """Convert a relative path to an absolute path based on base_dir."""
-        if path.is_absolute():
-            return path
-        return self.base_dir / path
+    def get_absolute_path(self, path: Union[str, Path]) -> Path:
+        """Convert a relative path to an absolute path based on base_dir.
+        
+        Args:
+            path: A string or Path object representing the path to convert
+            
+        Returns:
+            Path: The absolute path
+        """
+        path_obj = Path(path) if isinstance(path, str) else path
+        if path_obj.is_absolute():
+            return path_obj
+        return self.base_dir / path_obj
     
     def get_db_url(self) -> str:
         """Get the database URL for SQLite."""

@@ -16,16 +16,16 @@ logger = logging.getLogger(__name__)
 
 class ZettelkastenMcpServer:
     """MCP server for Zettelkasten."""
-    def __init__(self):
-        """Initialize the MCP server."""
+    def __init__(self, zettel_service: Optional[ZettelService] = None, search_service: Optional[SearchService] = None, export_service: Optional[ExportService] = None):
+        """Initialize the MCP server with optional service instances."""
         self.mcp = FastMCP(
             config.server_name,
             version=config.server_version
         )
         # Services
-        self.zettel_service = ZettelService()
-        self.search_service = SearchService(self.zettel_service)
-        self.export_service = ExportService(self.zettel_service)
+        self.zettel_service = zettel_service or ZettelService()
+        self.search_service = search_service or SearchService(self.zettel_service)
+        self.export_service = export_service or ExportService(self.zettel_service)
         # Initialize services
         self.initialize()
         # Register tools
@@ -38,6 +38,19 @@ class ZettelkastenMcpServer:
         self.zettel_service.initialize()
         self.search_service.initialize()
         logger.info("Zettelkasten MCP server initialized")
+
+    def cleanup(self) -> None:
+        """Clean up resources and close connections."""
+        if self.search_service:
+            self.search_service.cleanup()
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()
 
     def format_error_response(self, error: Exception) -> str:
         """Format an error response in a consistent way.

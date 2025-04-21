@@ -41,13 +41,26 @@ class TestIntegration:
         
         yield
         
+        # Clean up services first
+        if hasattr(self, 'zettel_service'):
+            self.zettel_service.cleanup()
+        if hasattr(self, 'search_service'):
+            self.search_service.cleanup()
+        if hasattr(self, 'server'):
+            self.server.cleanup()
+            
         # Restore original config
         config.notes_dir = self.original_notes_dir
         config.database_path = self.original_database_path
         
         # Clean up temp directories
-        self.temp_notes_dir.cleanup()
-        self.temp_db_dir.cleanup()
+        try:
+            self.temp_notes_dir.cleanup()
+            self.temp_db_dir.cleanup()
+        except PermissionError:
+            # If cleanup fails due to file locks, log it but don't fail the test
+            import logging
+            logging.warning("Could not clean up temporary directories due to file locks")
     
     def test_create_note_flow(self):
         """Test the complete flow of creating and retrieving a note."""
