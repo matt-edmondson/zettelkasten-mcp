@@ -11,7 +11,7 @@ from sqlalchemy import and_, create_engine, func, or_, select, text
 from sqlalchemy.orm import Session, joinedload, sessionmaker
 
 from zettelkasten_mcp.config import config
-from zettelkasten_mcp.models.db_models import (DBLink, DBNote, DBTag,
+from zettelkasten_mcp.models.db_models import (Base, DBLink, DBNote, DBTag,
                                             get_session_factory, init_db)
 from zettelkasten_mcp.models.schema import Link, LinkType, Note, NoteType, Tag
 from zettelkasten_mcp.storage.base import Repository
