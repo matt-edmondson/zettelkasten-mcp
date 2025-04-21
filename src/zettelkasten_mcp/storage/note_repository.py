@@ -11,7 +11,7 @@ from sqlalchemy import and_, create_engine, func, or_, select, text
 from sqlalchemy.orm import Session, joinedload, sessionmaker
 
 from zettelkasten_mcp.config import config
-from zettelkasten_mcp.models.db_models import (DBLink, DBNote, DBTag,
+from zettelkasten_mcp.models.db_models import (Base, DBLink, DBNote, DBTag,
                                             get_session_factory, init_db)
 from zettelkasten_mcp.models.schema import Link, LinkType, Note, NoteType, Tag
 from zettelkasten_mcp.storage.base import Repository
@@ -55,6 +55,19 @@ class NoteRepository(Repository[Note]):
         """Close the database connection."""
         if hasattr(self, 'engine'):
             self.engine.dispose()
+        
+        # Force disposal of any session-related resources
+        if hasattr(self, 'session_factory'):
+            # Make sure any existing sessions are closed
+            session = None
+            try:
+                session = self.session_factory()
+                session.close()
+            except:
+                pass
+            finally:
+                if session:
+                    session.close()
     
     def rebuild_index_if_needed(self) -> None:
         """Rebuild the database index from files if needed."""
@@ -677,16 +690,20 @@ class NoteRepository(Repository[Note]):
         return [Tag(name=tag.name) for tag in db_tags]
 
     def __del__(self):
-        """Clean up database connections when the repository is destroyed."""
-        self.close()
+        """Destructor to ensure resources are released."""
+        try:
+            self.close()
+        except:
+            pass  # Ignore errors during garbage collection
             
     def __enter__(self):
         """Context manager entry."""
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
+        """Exit the context manager."""
         self.close()
+        return False  # Do not suppress exceptions
 
     def create_link(self, source_id: str, target_id: str, link_type: str = "reference", 
                     description: Optional[str] = None, bidirectional: bool = False) -> None:

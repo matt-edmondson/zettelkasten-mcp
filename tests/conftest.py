@@ -51,27 +51,15 @@ def test_config(temp_dirs):
     original_notes_dir = config.notes_dir
     original_database_path = config.database_path
     
-    # Create temporary directories for test
-    with tempfile.TemporaryDirectory() as temp_dir:
-        notes_dir = os.path.join(temp_dir, "notes")
-        os.makedirs(notes_dir, exist_ok=True)
-        
-        # Update config for test
-        config.notes_dir = notes_dir
-        config.database_path = os.path.join(temp_dir, "test_zettelkasten.db")
-        
-        yield config
-        
-        # Clean up resources
-        try:
-            if os.path.exists(config.database_path):
-                os.unlink(config.database_path)
-        except PermissionError:
-            pass  # Handle case where file is still in use
-            
-        # Restore original config
-        config.notes_dir = original_notes_dir
-        config.database_path = original_database_path
+    # Update config for test
+    config.notes_dir = notes_dir
+    config.database_path = database_path
+    
+    yield config
+    
+    # Restore original config
+    config.notes_dir = original_notes_dir
+    config.database_path = original_database_path
 
 @pytest.fixture
 def note_repository(test_config, request):
