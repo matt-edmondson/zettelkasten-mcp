@@ -207,3 +207,69 @@ def test_find_similar_notes(zettel_service):
     # At least one of note2 or note3 should be in the similar notes
     # (They share tags and/or links with note1)
     assert note2.id in similar_ids or note3.id in similar_ids
+
+def test_find_broken_links(zettel_service):
+    """Test finding broken links."""
+    # Create test notes
+    source_note = zettel_service.create_note(
+        title="Source Note",
+        content="Source content",
+        note_type=NoteType.PERMANENT
+    )
+    
+    valid_target = zettel_service.create_note(
+        title="Valid Target",
+        content="Valid target content",
+        note_type=NoteType.PERMANENT
+    )
+    
+    # Add both valid and broken links
+    source_note.add_link(valid_target.id, LinkType.REFERENCE, "Valid link")
+    source_note.add_link("non-existent-id", LinkType.EXTENDS, "Broken link")
+    zettel_service.repository.update(source_note)
+    
+    # Find broken links
+    broken_links = zettel_service.find_broken_links()
+    
+    # Verify results
+    assert len(broken_links) == 1
+    assert broken_links[0]["source_id"] == source_note.id
+    assert broken_links[0]["source_title"] == "Source Note"
+    assert broken_links[0]["target_id"] == "non-existent-id"
+    assert broken_links[0]["link_type"] == LinkType.EXTENDS
+    assert broken_links[0]["description"] == "Broken link"
+
+def test_batch_get_notes(zettel_service):
+    """Test retrieving multiple notes in a batch."""
+    # Create test notes
+    note1 = zettel_service.create_note(
+        title="First Note",
+        content="First content",
+        note_type=NoteType.PERMANENT
+    )
+    
+    note2 = zettel_service.create_note(
+        title="Second Note",
+        content="Second content",
+        note_type=NoteType.LITERATURE
+    )
+    
+    note3 = zettel_service.create_note(
+        title="Unique Title",
+        content="Content with unique title",
+        note_type=NoteType.FLEETING
+    )
+    
+    # Batch get by IDs and title
+    identifiers = [note1.id, note2.id, "Unique Title", "non-existent-id"]
+    notes, not_found = zettel_service.batch_get_notes(identifiers)
+    
+    # Verify results
+    assert len(notes) == 3
+    assert len(not_found) == 1
+    assert not_found[0] == "non-existent-id"
+    
+    # Check that notes are retrieved in the expected order
+    assert notes[0].id == note1.id
+    assert notes[1].id == note2.id
+    assert notes[2].title == "Unique Title"

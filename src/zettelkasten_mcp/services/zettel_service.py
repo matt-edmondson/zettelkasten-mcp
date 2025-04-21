@@ -669,3 +669,64 @@ class ZettelService:
             results=results
         )
 
+    def find_broken_links(self) -> List[Dict[str, Any]]:
+        """Find all links that point to non-existent notes.
+        
+        Returns:
+            List of dictionaries containing broken link information with keys:
+            - source_id: ID of the source note
+            - source_title: Title of the source note
+            - target_id: ID of the target note (which doesn't exist)
+            - link_type: Type of the link
+            - description: Link description (if any)
+        """
+        all_notes = self.get_all_notes()
+        broken_links = []
+        
+        # Examine each note's links
+        for note in all_notes:
+            for link in note.links:
+                # Check if target note exists
+                target_note = self.get_note(link.target_id)
+                if target_note is None:
+                    broken_links.append({
+                        "source_id": note.id,
+                        "source_title": note.title,
+                        "target_id": link.target_id,
+                        "link_type": link.link_type,
+                        "description": link.description
+                    })
+        
+        return broken_links
+        
+    def batch_get_notes(self, identifiers: List[str]) -> Tuple[List[Note], List[str]]:
+        """Retrieve multiple notes in a single batch operation.
+        
+        Args:
+            identifiers: List of note IDs or titles to retrieve
+            
+        Returns:
+            Tuple containing:
+            - List of successfully retrieved notes
+            - List of identifiers that were not found
+        """
+        notes = []
+        not_found = []
+        
+        # Attempt to retrieve each note
+        for identifier in identifiers:
+            identifier = str(identifier)
+            
+            # Try to get by ID first
+            note = self.get_note(identifier)
+            # If not found, try by title
+            if not note:
+                note = self.get_note_by_title(identifier)
+                
+            if note:
+                notes.append(note)
+            else:
+                not_found.append(identifier)
+                
+        return notes, not_found
+

@@ -1101,23 +1101,8 @@ class ZettelkastenMcpServer:
                 A formatted report of broken links found in the Zettelkasten.
             """
             try:
-                # Get all notes
-                all_notes = self.zettel_service.get_all_notes()
-                broken_links = []
-                
-                # Examine each note's links
-                for note in all_notes:
-                    for link in note.links:
-                        # Check if target note exists
-                        target_note = self.zettel_service.get_note(link.target_id)
-                        if target_note is None:
-                            broken_links.append({
-                                "source_id": note.id,
-                                "source_title": note.title,
-                                "target_id": link.target_id,
-                                "link_type": link.link_type.value,
-                                "description": link.description
-                            })
+                # Delegate to service layer
+                broken_links = self.zettel_service.find_broken_links()
                 
                 # Format the result
                 if not broken_links:
@@ -1126,7 +1111,7 @@ class ZettelkastenMcpServer:
                 result = f"Found {len(broken_links)} broken links in the Zettelkasten:\n\n"
                 for i, link in enumerate(broken_links, 1):
                     result += f"{i}. In note: {link['source_title']} (ID: {link['source_id']})\n"
-                    result += f"   Link type: {link['link_type']}\n"
+                    result += f"   Link type: {link['link_type'].value}\n"
                     result += f"   Target ID: {link['target_id']} (not found)\n"
                     if link['description']:
                         result += f"   Description: {link['description']}\n"
@@ -1156,23 +1141,8 @@ class ZettelkastenMcpServer:
                 if len(note_ids) > 50:
                     return f"Error: Batch size too large. Maximum is 50 notes, but {len(note_ids)} were requested."
                 
-                notes = []
-                not_found = []
-                
-                # Attempt to retrieve each note
-                for identifier in note_ids:
-                    identifier = str(identifier)
-                    
-                    # Try to get by ID first
-                    note = self.zettel_service.get_note(identifier)
-                    # If not found, try by title
-                    if not note:
-                        note = self.zettel_service.get_note_by_title(identifier)
-                        
-                    if note:
-                        notes.append(note)
-                    else:
-                        not_found.append(identifier)
+                # Delegate to service layer
+                notes, not_found = self.zettel_service.batch_get_notes(note_ids)
                 
                 # Format the result
                 if not notes and not_found:
