@@ -1090,6 +1090,121 @@ class ZettelkastenMcpServer:
             except Exception as e:
                 return self.format_error_response(e)
 
+        @self.mcp.tool(name="zk_find_broken_links")
+        def zk_find_broken_links() -> str:
+            """Find all links that point to non-existent notes.
+            
+            This tool scans all notes in the Zettelkasten and identifies links that
+            reference notes that don't exist (broken links).
+            
+            Returns:
+                A formatted report of broken links found in the Zettelkasten.
+            """
+            try:
+                # Get all notes
+                all_notes = self.zettel_service.get_all_notes()
+                broken_links = []
+                
+                # Examine each note's links
+                for note in all_notes:
+                    for link in note.links:
+                        # Check if target note exists
+                        target_note = self.zettel_service.get_note(link.target_id)
+                        if target_note is None:
+                            broken_links.append({
+                                "source_id": note.id,
+                                "source_title": note.title,
+                                "target_id": link.target_id,
+                                "link_type": link.link_type.value,
+                                "description": link.description
+                            })
+                
+                # Format the result
+                if not broken_links:
+                    return "No broken links found in the Zettelkasten."
+                
+                result = f"Found {len(broken_links)} broken links in the Zettelkasten:\n\n"
+                for i, link in enumerate(broken_links, 1):
+                    result += f"{i}. In note: {link['source_title']} (ID: {link['source_id']})\n"
+                    result += f"   Link type: {link['link_type']}\n"
+                    result += f"   Target ID: {link['target_id']} (not found)\n"
+                    if link['description']:
+                        result += f"   Description: {link['description']}\n"
+                    result += "\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
+        @self.mcp.tool(name="zk_get_notes_batch")
+        def zk_get_notes_batch(note_ids: list) -> str:
+            """Retrieve multiple notes in a single batch operation.
+            
+            Args:
+                note_ids: List of note IDs or titles to retrieve
+                
+            Example:
+                ["20230101120000", "My Note Title", "20230102120000"]
+            
+            Returns:
+                A formatted string containing all requested notes.
+            """
+            try:
+                if not isinstance(note_ids, list):
+                    return "Error: note_ids must be a list of note IDs or titles"
+                
+                if len(note_ids) > 50:
+                    return f"Error: Batch size too large. Maximum is 50 notes, but {len(note_ids)} were requested."
+                
+                notes = []
+                not_found = []
+                
+                # Attempt to retrieve each note
+                for identifier in note_ids:
+                    identifier = str(identifier)
+                    
+                    # Try to get by ID first
+                    note = self.zettel_service.get_note(identifier)
+                    # If not found, try by title
+                    if not note:
+                        note = self.zettel_service.get_note_by_title(identifier)
+                        
+                    if note:
+                        notes.append(note)
+                    else:
+                        not_found.append(identifier)
+                
+                # Format the result
+                if not notes and not_found:
+                    return f"None of the requested notes were found: {', '.join(not_found)}"
+                
+                result = f"Retrieved {len(notes)} notes ({len(not_found)} not found):\n\n"
+                
+                # Add details about each note
+                for i, note in enumerate(notes, 1):
+                    result += f"--- Note {i}: {note.title} ---\n"
+                    result += f"ID: {note.id}\n"
+                    result += f"Type: {note.note_type.value}\n"
+                    result += f"Created: {note.created_at.isoformat()}\n"
+                    result += f"Updated: {note.updated_at.isoformat()}\n"
+                    if note.tags:
+                        result += f"Tags: {', '.join(tag.name for tag in note.tags)}\n"
+                    result += f"\n{note.content}\n"
+                    if note.links:
+                        result += "\n## Links\n"
+                        for link in note.links:
+                            desc = f" - {link.description}" if link.description else ""
+                            result += f"- {link.link_type.value}: {link.target_id}{desc}\n"
+                    result += "\n" + "-" * 40 + "\n\n"
+                
+                # Add list of notes not found
+                if not_found:
+                    result += f"The following notes were not found: {', '.join(not_found)}\n"
+                
+                return result
+            except Exception as e:
+                return self.format_error_response(e)
+
     def _register_resources(self) -> None:
         """Register MCP resources."""
         # Currently, we don't define resources for the Zettelkasten server
