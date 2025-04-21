@@ -23,9 +23,9 @@ class ZettelkastenMcpServer:
             version=config.server_version
         )
         # Services
-        self.zettel_service = zettel_service or ZettelService()
-        self.search_service = search_service or SearchService(self.zettel_service)
-        self.export_service = export_service or ExportService(self.zettel_service)
+        self.zettel_service = ZettelService()
+        self.search_service = SearchService(self.zettel_service)
+        self.export_service = ExportService(self.zettel_service)
         # Initialize services
         self.initialize()
         # Register tools
