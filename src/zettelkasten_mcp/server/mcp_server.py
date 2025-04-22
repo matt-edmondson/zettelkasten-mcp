@@ -128,12 +128,8 @@ class ZettelkastenMcpServer:
                 result += f"Updated: {note.updated_at.isoformat()}\n"
                 if note.tags:
                     result += f"Tags: {', '.join(tag.name for tag in note.tags)}\n"
+                # Add note content, including the Links section added by _note_to_markdown()
                 result += f"\n{note.content}\n"
-                if note.links:
-                    result += "\n## Links\n"
-                    for link in note.links:
-                        desc = f" - {link.description}" if link.description else ""
-                        result += f"- {link.link_type.value}: {link.target_id}{desc}\n"
                 return result
             except Exception as e:
                 return self.format_error_response(e)
@@ -247,6 +243,7 @@ class ZettelkastenMcpServer:
                 if "UNIQUE constraint failed" in str(e):
                     return f"A link of this type already exists between these notes. Try a different link type."
                 return self.format_error_response(e)
+        self.zk_create_link = zk_create_link
 
         # Remove a link between notes
         @self.mcp.tool(name="zk_remove_link")
@@ -347,12 +344,10 @@ class ZettelkastenMcpServer:
             try:
                 if direction not in ["outgoing", "incoming", "both"]:
                     return f"Invalid direction: {direction}. Use 'outgoing', 'incoming', or 'both'."
-                
                 # Get linked notes
                 linked_notes = self.zettel_service.get_linked_notes(str(note_id), direction)
                 if not linked_notes:
                     return f"No {direction} links found for note {note_id}."
-                
                 # Format results
                 output = f"Found {len(linked_notes)} {direction} linked notes for {note_id}:\n\n"
                 for i, note in enumerate(linked_notes, 1):
@@ -365,7 +360,7 @@ class ZettelkastenMcpServer:
                         source_note = self.zettel_service.get_note(str(note_id))
                         if source_note:
                             for link in source_note.links:
-                                if link.target_id == note.id:
+                                if str(link.target_id) == str(note.id):  # Explicit string conversion for comparison
                                     output += f"   Link type: {link.link_type.value}\n"
                                     if link.description:
                                         output += f"   Description: {link.description}\n"
@@ -373,7 +368,7 @@ class ZettelkastenMcpServer:
                     if direction in ["incoming", "both"]:
                         # Check target note's outgoing links
                         for link in note.links:
-                            if link.target_id == str(note_id):
+                            if str(link.target_id) == str(note_id):  # Explicit string conversion for comparison
                                 output += f"   Incoming link type: {link.link_type.value}\n"
                                 if link.description:
                                     output += f"   Description: {link.description}\n"
@@ -382,6 +377,7 @@ class ZettelkastenMcpServer:
                 return output
             except Exception as e:
                 return self.format_error_response(e)
+        self.zk_get_linked_notes = zk_get_linked_notes
 
         # Get all tags
         @self.mcp.tool(name="zk_get_all_tags")
