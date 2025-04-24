@@ -354,7 +354,14 @@ class NoteRepository(Repository[Note]):
         return note
     
     def get(self, id: str) -> Optional[Note]:
-        """Get a note by ID."""
+        """Get a note by ID.
+        
+        Args:
+            id: The ISO 8601 formatted identifier of the note
+            
+        Returns:
+            Note object if found, None otherwise
+        """
         file_path = self.notes_dir / f"{id}.md"
         if not file_path.exists():
             return None
