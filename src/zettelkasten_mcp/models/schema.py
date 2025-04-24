@@ -2,6 +2,7 @@
 import sys
 import time
 import datetime
+from datetime import datetime as dt
 import random
 import inspect
 from enum import Enum
@@ -9,27 +10,34 @@ from typing import Any, Dict, List, Optional, Set, Union
 from pydantic import BaseModel, Field, field_validator
 
 def generate_id() -> str:
-    """Generate a timestamp-based ID for a note."""
-    from zettelkasten_mcp.config import config
-    now = datetime.datetime.now()
-    # Include milliseconds in test environments to avoid ID collisions
-    # if 'pytest' in sys.modules:
-    #     return now.strftime("%Y%m%d%H%M%S%f")[:17]  # Truncate to keep reasonable length
-    if 'pytest' in sys.modules:
-        # Check if this is the specific ID generation test
-        # The ID generation test uses a mock for datetime that returns specific values
-        stack_frames = inspect.stack()
-        is_id_test = any('test_generate_id' in frame.function for frame in stack_frames)
+    """Generate an ISO 8601 compliant timestamp-based ID with nanosecond precision.
+    
+    Returns:
+        A string in format "YYYYMMDDTHHMMSSsssssssss" where:
+        - YYYYMMDD is the date
+        - T is the ISO 8601 date/time separator
+        - HHMMSS is the time (hours, minutes, seconds)
+        - sssssssss is the 9-digit nanosecond component
         
-        if is_id_test:
-            # For the specific test, just use the standard format without random numbers
-            return now.strftime("%Y%m%d%H%M%S%f")[:17]  # Truncate to keep expected format
-        else:
-            # For all other tests, ensure unique IDs with small delay and random suffix
-            time.sleep(0.02)  # 20ms delay between ID generations (reduced from 50ms)
-            random_suffix = random.randint(100, 999)
-            return now.strftime("%Y%m%d%H%M%S%f")[:-3] + str(random_suffix)
-    return now.strftime(config.id_date_format)
+    The format follows ISO 8601 basic format with extended precision,
+    allowing up to 1 billion unique IDs per second.
+    """
+    # Get nanoseconds since epoch
+    ns_timestamp = time.time_ns()
+    
+    # Convert to seconds and nanosecond fraction
+    seconds = ns_timestamp // 1_000_000_000
+    nanoseconds = ns_timestamp % 1_000_000_000
+    
+    # Convert seconds to datetime
+    timestamp = dt.fromtimestamp(seconds)
+    
+    # Format as ISO 8601 basic format (YYYYMMDDThhmmss) with nanoseconds
+    # Use basic format (without separators except T) for filesystem compatibility
+    date_time = timestamp.strftime('%Y%m%dT%H%M%S')
+    
+    # Return the ISO 8601 timestamp with nanosecond precision
+    return f"{date_time}{nanoseconds:09d}"
 
 class LinkType(str, Enum):
     """Types of links between notes."""
