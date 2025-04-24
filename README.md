@@ -74,11 +74,13 @@ NB: Optionally include the source code with a tool like [repomix](https://github
 
 The Zettelkasten MCP server supports different types of notes:
 
-1. **Fleeting notes** (fleeting): Quick, temporary notes for capturing ideas
-2. **Literature notes** (literature): Notes from reading material
-3. **Permanent notes** (permanent): Well-formulated, evergreen notes
-4. **Structure notes** (structure): Index or outline notes that organize other notes
-5. **Hub notes** (hub): Entry points to the Zettelkasten on key topics
+|Type|Handle|Description|
+|---|---|---|
+|**Fleeting notes**|`fleeting`|Quick, temporary notes for capturing ideas|
+|**Literature notes**|`literature`|Notes from reading material|
+|**Permanent notes**|`permanent`|Well-formulated, evergreen notes|
+|**Structure notes**|`structure`|Index or outline notes that organize other notes|
+|**Hub notes**|`hub`|Entry points to the Zettelkasten on key topics|
 
 ## Link Types
 
