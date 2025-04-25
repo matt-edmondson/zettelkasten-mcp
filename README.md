@@ -1,6 +1,6 @@
 # Zettelkasten MCP Server
 
-A Model Context Protocol (MCP) server that implements the Zettelkasten knowledge management methodology, allowing you to create, link, and search atomic notes through Claude and other MCP-compatible clients.
+A Model Context Protocol (MCP) server that implements the Zettelkasten knowledge management methodology, allowing you to create, link, explore and synthesize atomic notes through Claude and other MCP-compatible clients.
 
 ## What is Zettelkasten?
 
@@ -30,9 +30,33 @@ This structure invites serendipitous discoveries as you follow trails of thought
 
 ## Examples
 
-- [A small Zettelkasten knowledge network about the Zettelkasten method itself](https://github.com/entanglr/zettelkasten-mcp/discussions/5)
+- Knowledge creation: [A small Zettelkasten knowledge network about the Zettelkasten method itself](https://github.com/entanglr/zettelkasten-mcp/discussions/5)
 
-[+ Add an example](https://github.com/entanglr/zettelkasten-mcp/discussions/categories/show-and-tell)
+## Note Types
+
+The Zettelkasten MCP server supports different types of notes:
+
+|Type|Handle|Description|
+|---|---|---|
+|**Fleeting notes**|`fleeting`|Quick, temporary notes for capturing ideas|
+|**Literature notes**|`literature`|Notes from reading material|
+|**Permanent notes**|`permanent`|Well-formulated, evergreen notes|
+|**Structure notes**|`structure`|Index or outline notes that organize other notes|
+|**Hub notes**|`hub`|Entry points to the Zettelkasten on key topics|
+
+## Link Types
+
+The Zettelkasten MCP server uses a comprehensive semantic linking system that creates meaningful connections between notes. Each link type represents a specific relationship, allowing for a rich, multi-dimensional knowledge graph.
+
+| Primary Link Type | Inverse Link Type | Relationship Description |
+|-------------------|-------------------|--------------------------|
+| `reference` | `reference` | Simple reference to related information (symmetric relationship) |
+| `extends` | `extended_by` | One note builds upon or develops concepts from another |
+| `refines` | `refined_by` | One note clarifies or improves upon another |
+| `contradicts` | `contradicted_by` | One note presents opposing views to another |
+| `questions` | `questioned_by` | One note poses questions about another |
+| `supports` | `supported_by` | One note provides evidence for another |
+| `related` | `related` | Generic relationship (symmetric relationship) |
 
 ## Prompting
 
@@ -69,30 +93,6 @@ For developers and contributors:
 - [llms-full.txt](https://github.com/entanglr/zettelkasten-mcp/blob/main/docs/project-knowledge/dev/llms-full.txt)
 
 NB: Optionally include the source code with a tool like [repomix](https://github.com/yamadashy/repomix).
-
-## Note Types
-
-The Zettelkasten MCP server supports different types of notes:
-
-1. **Fleeting notes** (fleeting): Quick, temporary notes for capturing ideas
-2. **Literature notes** (literature): Notes from reading material
-3. **Permanent notes** (permanent): Well-formulated, evergreen notes
-4. **Structure notes** (structure): Index or outline notes that organize other notes
-5. **Hub notes** (hub): Entry points to the Zettelkasten on key topics
-
-## Link Types
-
-The Zettelkasten MCP server uses a comprehensive semantic linking system that creates meaningful connections between notes. Each link type represents a specific relationship, allowing for a rich, multi-dimensional knowledge graph.
-
-| Primary Link Type | Inverse Link Type | Relationship Description |
-|-------------------|-------------------|--------------------------|
-| `reference` | `reference` | Simple reference to related information (symmetric relationship) |
-| `extends` | `extended_by` | One note builds upon or develops concepts from another |
-| `refines` | `refined_by` | One note clarifies or improves upon another |
-| `contradicts` | `contradicted_by` | One note presents opposing views to another |
-| `questions` | `questioned_by` | One note poses questions about another |
-| `supports` | `supported_by` | One note provides evidence for another |
-| `related` | `related` | Generic relationship (symmetric relationship) |
 
 ## Storage Architecture
 
@@ -277,12 +277,13 @@ uv run pytest -v tests/test_models.py::TestNoteModel::test_note_validation
 ```
 tests/
 ├── conftest.py - Common fixtures for all tests
+├── test_integration.py - Integration tests for the entire system
+├── test_mcp_server.py - Tests for MCP server tools
 ├── test_models.py - Tests for data models
 ├── test_note_repository.py - Tests for note repository
-├── test_zettel_service.py - Tests for zettel service
 ├── test_search_service.py - Tests for search service
-├── test_mcp_server.py - Tests for MCP server tools
-└── test_integration.py - Integration tests for the entire system
+├── test_semantic_links.py - Tests for semantic linking
+└── test_zettel_service.py - Tests for zettel service
 ```
 
 ## Important Notice

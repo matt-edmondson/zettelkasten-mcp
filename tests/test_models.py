@@ -1,6 +1,8 @@
 # tests/test_models.py
 """Tests for the data models used in the Zettelkasten MCP server."""
 import datetime
+import time
+import re
 import pytest
 from unittest.mock import patch
 from pydantic import ValidationError
@@ -169,25 +171,45 @@ class TestTagModel:
 
 class TestHelperFunctions:
     """Tests for helper functions in the schema module."""
-    
-    @patch('zettelkasten_mcp.models.schema.datetime')
-    def test_generate_id(self, mock_datetime):
-        """Test the ID generation function with mocked datetime."""
-        # Mock two different timestamp values with microseconds
-        mock_first_time = datetime.datetime(2023, 1, 1, 12, 0, 0, microsecond=123000)
-        mock_datetime.datetime.now.return_value = mock_first_time
+
+    def test_iso8601_id_format(self):
+        """Test that generated IDs follow the correct ISO 8601 format with nanosecond precision."""
+        # Generate an ID
+        id_str = generate_id()
         
-        id1 = generate_id()
+        # Verify it matches the expected format: YYYYMMDDTHHMMSSsssssssss
+        # Where sssssssss is a 9-digit nanosecond component
+        pattern = r'^\d{8}T\d{6}\d{9}$'
+        assert re.match(pattern, id_str), f"ID {id_str} does not match expected ISO 8601 basic format"
         
-        # Change the mocked time
-        mock_second_time = datetime.datetime(2023, 1, 1, 12, 0, 1, microsecond=456000)
-        mock_datetime.datetime.now.return_value = mock_second_time
+        # Verify the parts make sense
+        date_part = id_str[:8]
+        separator = id_str[8]
+        time_part = id_str[9:15]
+        ns_part = id_str[15:]
         
-        id2 = generate_id()
+        assert len(date_part) == 8, "Date part should be 8 digits (YYYYMMDD)"
+        assert separator == 'T', "Date/time separator should be 'T' per ISO 8601"
+        assert len(time_part) == 6, "Time part should be 6 digits (HHMMSS)"
+        assert len(ns_part) == 9, "Nanosecond part should be 9 digits"
+
+    def test_iso8601_uniqueness(self):
+        """Test that ISO 8601 IDs with nanosecond precision are unique even in rapid succession."""
+        # Generate multiple IDs as quickly as possible
+        ids = [generate_id() for _ in range(1000)]
         
-        # Verify the IDs are formatted correctly with milliseconds (17 chars)
-        assert id1 == "20230101120000123"  # Format is YYYYMMDDhhmmssmmm
-        assert id2 == "20230101120001456"  # Second ID
+        # Verify they are all unique
+        unique_ids = set(ids)
+        assert len(unique_ids) == 1000, "Generated IDs should all be unique"
+
+    def test_iso8601_chronological_sorting(self):
+        """Test that ISO 8601 IDs sort chronologically without artificial delays."""
+        # Generate multiple IDs in the fastest possible succession
+        ids = [generate_id() for _ in range(5)]
         
-        # Verify the IDs are unique
-        assert id1 != id2
+        # Verify they're all unique
+        assert len(set(ids)) == 5
+        
+        # Verify chronological order matches lexicographical sorting
+        sorted_ids = sorted(ids)
+        assert sorted_ids == ids, "ISO 8601 IDs should sort chronologically"

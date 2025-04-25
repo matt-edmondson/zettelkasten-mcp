@@ -152,27 +152,34 @@ class NoteRepository(Repository[Note]):
             if links_section and line.startswith("- "):
                 # Parse link line
                 try:
-                    # Example format: - [reference] [[202101010000]] Optional description
-                    link_line = line[2:].strip()
-                    # Extract link type
-                    link_type_str = LinkType.REFERENCE.value
-                    if link_line.startswith("[") and "]" in link_line:
-                        link_type_str = link_line[1:link_line.index("]")]
-                        link_line = link_line[link_line.index("]") + 1:].strip()
-                    try:
-                        link_type = LinkType(link_type_str)
-                    except ValueError:
-                        link_type = LinkType.REFERENCE
-                    # Extract target ID
-                    if "[[" in link_line and "]]" in link_line:
-                        target_id = link_line[link_line.index("[[") + 2:link_line.index("]]")]
-                        description = link_line[link_line.index("]]") + 2:].strip()
+                    # Example format: - reference [[202101010000]] Optional description
+                    line_content = line.strip()
+                    if "[[" in line_content and "]]" in line_content:
+                        # Split the line at the [[ delimiter
+                        parts = line_content.split("[[", 1)
+                        # Extract the link type from before [[
+                        link_type_str = parts[0].strip()
+                        # Remove the leading "- " from the link type string
+                        if link_type_str.startswith("- "):
+                            link_type_str = link_type_str[2:].strip()
+                        # Extract target ID and description
+                        id_and_description = parts[1].split("]]", 1)
+                        target_id = id_and_description[0].strip()
+                        description = None
+                        if len(id_and_description) > 1:
+                            description = id_and_description[1].strip()
+                        # Validate link type
+                        try:
+                            link_type = LinkType(link_type_str)
+                        except ValueError:
+                            # If not a valid type, default to reference
+                            link_type = LinkType.REFERENCE
                         links.append(
                             Link(
                                 source_id=note_id,
                                 target_id=target_id,
                                 link_type=link_type,
-                                description=description if description else None,
+                                description=description,
                                 created_at=datetime.datetime.now()
                             )
                         )
@@ -347,7 +354,14 @@ class NoteRepository(Repository[Note]):
         return note
     
     def get(self, id: str) -> Optional[Note]:
-        """Get a note by ID."""
+        """Get a note by ID.
+        
+        Args:
+            id: The ISO 8601 formatted identifier of the note
+            
+        Returns:
+            Note object if found, None otherwise
+        """
         file_path = self.notes_dir / f"{id}.md"
         if not file_path.exists():
             return None

@@ -1,6 +1,8 @@
 """Data models for the Zettelkasten MCP server."""
 import sys
 import datetime
+from datetime import datetime as dt
+import random
 import inspect
 from enum import Enum
 from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union, TypedDict
@@ -11,42 +13,34 @@ _last_datetime_component = ""
 _id_counter = 0
 
 def generate_id() -> str:
-    """Generate a timestamp-based ID for a note.
+    """Generate an ISO 8601 compliant timestamp-based ID with nanosecond precision.
     
-    Uses a counter-based approach to ensure uniqueness:
-    - If multiple IDs are generated with the same timestamp, a counter is incremented
-    - When the timestamp changes, the counter is reset to 0
-    - The ID consists of the timestamp followed by the counter value
-    """
-    global _last_datetime_component, _id_counter
-    from zettelkasten_mcp.config import config
-    now = datetime.datetime.now()
-    
-    # Special handling only for tests that specifically test ID generation
-    if 'pytest' in sys.modules:
-        stack_frames = inspect.stack()
-        is_id_test = any('test_generate_id' in frame.function for frame in stack_frames)
+    Returns:
+        A string in format "YYYYMMDDTHHMMSSsssssssss" where:
+        - YYYYMMDD is the date
+        - T is the ISO 8601 date/time separator
+        - HHMMSS is the time (hours, minutes, seconds)
+        - sssssssss is the 9-digit nanosecond component
         
-        if is_id_test:
-            # For tests specifically testing ID generation, use deterministic format
-            return now.strftime("%Y%m%d%H%M%S%f")[:17]
+    The format follows ISO 8601 basic format with extended precision,
+    allowing up to 1 billion unique IDs per second.
+    """
+    # Get nanoseconds since epoch
+    ns_timestamp = time.time_ns()
     
-    # Standard approach for both production and general tests:
-    # Use the counter-based method for ensuring unique IDs
-    timestamp = now.strftime(config.id_date_format)
+    # Convert to seconds and nanosecond fraction
+    seconds = ns_timestamp // 1_000_000_000
+    nanoseconds = ns_timestamp % 1_000_000_000
     
-    # Check if this is the same timestamp as last time
-    if timestamp == _last_datetime_component:
-        # Same timestamp, increment counter
-        _id_counter += 1
-    else:
-        # Different timestamp, reset counter
-        _last_datetime_component = timestamp
-        _id_counter = 0
+    # Convert seconds to datetime
+    timestamp = dt.fromtimestamp(seconds)
     
-    # Format the counter with leading zeros, using 3 digits
-    counter_str = f"{_id_counter:03d}"
-    return timestamp + counter_str
+    # Format as ISO 8601 basic format (YYYYMMDDThhmmss) with nanoseconds
+    # Use basic format (without separators except T) for filesystem compatibility
+    date_time = timestamp.strftime('%Y%m%dT%H%M%S')
+    
+    # Return the ISO 8601 timestamp with nanosecond precision
+    return f"{date_time}{nanoseconds:09d}"
 
 class LinkType(str, Enum):
     """Types of links between notes."""
